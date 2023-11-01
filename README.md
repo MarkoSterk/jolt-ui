@@ -65,7 +65,9 @@ This sets the default/index route of the app. If at startup no route is provided
 
 ##### Component
 
-Each component represents a small piece of the UI. It can be a standalone component or be host to many subcomponents or child-components. The main difference between sub- and child-components is in the way they are rendered. A subcomponent is always rendered with its main component. You can think of it as an inseperable unit, while any child-component is only rendered (inside it's parent) if it is addressed specifically.
+Each component represents a small piece of the UI. It can be a standalone component or be host to many subcomponents or child-components. The main difference between sub- and child-components is in the way they are rendered. A subcomponent is always rendered with its main component. You can think of it as an inseperable unit that shows a small part of the UI, while any child-component is only rendered (inside it's parent) if it is addressed specifically.
+
+Sub- and child-components are instances of the same class as the main components (Component class) and have therefore the same behavior.
 
 Regardless of the type, each component (including sub- and child-components) can listen to a single app data field and respond (i.e. refresh) when that field changes.
 
@@ -87,7 +89,21 @@ const componentName = new Component({
     beforeDeconstruct: {methods that run before the component gets destroyed},
     afterDeconstruct: {methods that run after the components gets destroyed},
     beforeDeactive: {methods that run before the component is officially deactivated},
-    afterDeactive: {methods that run after the component is officially deactivated}
+    afterDeactive: {methods that run after the component is officially deactivated},
+    subcomponents: {
+        subcomponent1,
+        subcomponent2,
+        .
+        .
+        .
+    },
+    childcomponents: {
+        childcomponent1,
+        childcomponent2,
+        .
+        .
+        .
+    }
 
 })
 
