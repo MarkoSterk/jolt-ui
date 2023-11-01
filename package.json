@@ -1,0 +1,23 @@
+{
+  "name": "jolt-ui",
+  "version": "1.0.0",
+  "description": "A simple frontend framework based on components. Allows fast development of reactive ui's.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "frontend",
+    "framework",
+    "components",
+    "reactive",
+    "simple",
+    "vanilla",
+    "java script"
+  ],
+  "author": "Marko Šterk",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
