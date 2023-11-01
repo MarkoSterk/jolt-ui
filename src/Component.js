@@ -83,12 +83,12 @@ class Component {
 
     async _setEventListeners(){
         let allEventTypes = {
-            'sjs-click': 'click',
-            'sjs-dblclick': 'dblclick',
-            'sjs-hover': 'mouseover',
-            'sjs-change': 'change',
-            'sjs-input': 'input',
-            'sjs-focusout': 'focusout'
+            'jolt-click': 'click',
+            'jolt-dblclick': 'dblclick',
+            'jolt-hover': 'mouseover',
+            'jolt-change': 'change',
+            'jolt-input': 'input',
+            'jolt-focusout': 'focusout'
         }
         for(let eventType in allEventTypes){
             let allElems = [...document.querySelector(this.container).querySelectorAll(`[${eventType}]`)]
