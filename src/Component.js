@@ -91,7 +91,7 @@ class Component {
             'jolt-focusout': 'focusout'
         }
         for(let eventType in allEventTypes){
-            let allElems = [...document.querySelector(this.container).querySelectorAll(`[${eventType}]`)]
+            let allElems = [...this.DOM.querySelectorAll(`[${eventType}]`)]
             for(let elem of allElems){
                 elem.addEventListener(`${allEventTypes[eventType]}`, async function(event){
                     let args = this._getArgs(elem, `${eventType}`)
@@ -117,19 +117,8 @@ class Component {
         }
     }
 
-    unsetMessage(){
-        document.querySelector(this.messageContainer).innerHTML = '';
-    }
-
-    setMessage(msg, status) {
-        const markup = `
-            <div class="alert alert-${status} text-center">
-                ${msg}
-            </div>
-        `
-        window.scrollTo(0, 0);
-        document.querySelector(this.messageContainer).insertAdjacentHTML('afterbegin', markup);
-        setTimeout(this.unsetMessage.bind(this), this.messageTimeout);
+    get DOM(){
+        return document.querySelector(this.container);;
     }
 
     async _reloadComponent() {
