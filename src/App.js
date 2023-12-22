@@ -1,4 +1,4 @@
-import { DataError, InitializationError } from "./Errors";
+import { DataError, InitializationError, AppConstructorError } from "./Errors";
 
 class App{
     name;
@@ -26,6 +26,10 @@ class App{
      * @param {Object} configs configuration object with key-value pairs
      */
     constructor(configs){
+        if(configs.container === undefined ||
+        configs.name === undefined || configs.data === undefined){
+            throw new AppConstructorError("Missing application configurations.")
+        }
         try{
             this.container = configs.container;
             this.name = configs.name
@@ -40,7 +44,7 @@ class App{
                 this.afterStart = configs.afterStart
             }
         }catch(e){
-            throw new InitializationError("Failed to initialize application.")
+            throw new AppConstructorError("Failed to initialize application.")
         }
     }
 
@@ -225,7 +229,7 @@ class App{
             }
             return visitedRoute;
         }catch(err){
-            throw err;
+            throw new InitializationError("App failed to start.");
         }
     }
 }

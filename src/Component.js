@@ -1,16 +1,16 @@
+import { ComponentConstructorError, DataError, RenderOptionsError } from "./Errors";
+
 class Component {
     /**
    * Main Component class.
    * @param {String} name Name of the component
    * @param  {String} container  ID/class or other identifier of container HTML element (i.e. div, section etc.). querySelector is used to fetch container.
-   * @param  {String} messageContainer   ID/class or other identifier of message container for message rendering (i.e. div, section etc.). querySelector is used to fetch container.
    * @param  {Function} markup Function for template rendering. Gets "this" object bound-
-   * @param  {BigInt} messageTimeout  Time in miliseconds how long messages are displayed. default = 5000
    * @param {object} subcomponents Object with subcomponents for this component
    * @param {Array} intervalMethods array of arrays [method, intervalDuration] for methods that need to run repeatedly
-   * @param {Component} parent Parent component if this component is a subcomponent
+   * @param {Component} parent Parent component if this component is a subcomponent or childcomponent
    * @param {object} methods Object with methods which extend component functionality. Used to create event listeners. Each method gets "this" (component) bound.
-   * @param {object} metaData Object with any additional data that the new component might need
+   * @param {object} properties Object with any additional data that the new component might need
    * @param {object} beforeGenerate Object with methods that should run before the component is generated and displayed. Fetching of data/api calls for example.
    * @param {object} afterGenerate Object with methods that should run after the component is generated. Should not include any data fetching because that would trigger a component reload
    * @param {object} beforeDeconstruct Object with methods that should run before the component is deconstructed. Can include custom data cleaning or other stuff.
@@ -19,9 +19,12 @@ class Component {
     */
     name;
     container;
-    messageContainer;
     markup;
-    messageTimeout = 5000;
+    renderOptions = {
+        delete: true,
+        insert: "afterbegin"
+    }
+
     subcomponents = {};
     childcomponents = {};
 
@@ -49,7 +52,19 @@ class Component {
     _queryParams;
 
     constructor(configs) {
+        if(configs.container === undefined || configs.name === undefined || configs.markup === undefined){
+            throw new ComponentConstructorError("Failed to construct component. Missing configurations.");
+        }
+        if(configs.renderOptions !== undefined){
+            if(configs.renderOptions.delete === undefined || configs.renderOptions.insert === undefined){
+                throw new RenderOptionsError("Render options error", configs.name);
+            }
+        }
         Object.assign(this, configs)
+    }
+
+    validateConfigData(value, valueType){
+        return typeof value === valueType.toLowerCase();
     }
 
     async _template(){
@@ -59,46 +74,53 @@ class Component {
     async _setAnimations(){
         let allElems = [...document.querySelector(this.container).querySelectorAll('[animate]')];
         for(let elem of allElems){
-            let args = this._getArgs(elem, 'sjs-animate')
-            if(args){
-                this.methods[elem.getAttribute('sjs-animate')](elem, args, this._app._data, this);
-            }
-            else {
-                this.methods[elem.getAttribute('sjs-animate')](elem, this._app._data, this);
-            }
+            let args = this._getAllArgs(elem)
+            this.methods[elem.getAttribute('animate')].bind(this)(elem, args);
         }
     }
 
-    _getArgs(elem, event){
-        let args = elem.getAttribute(`${event}-args`);
-        if(args){
-            try{
-                args = JSON.parse(args);
-            } catch{
-                //
+    _getAllArgs(elem){
+        return Array.from(elem.attributes).reduce((acc, attr) => {
+            if(attr.name.startsWith(":")){
+                const key = attr.name.substring(1);
+                let value = attr.value;
+                try{
+                    value = JSON.parse(value);
+                }catch(e){
+                    //do nothing
+                }
+                acc[key] = value;
             }
-        }
-        return args
+            return acc;
+        }, {});
+    }
+
+    getElementsWithJoltEvent(){
+        const allElements = this.DOM.querySelectorAll("*");
+        const joltElements = [];
+
+        allElements.forEach(element => {
+            Array.from(element.attributes).forEach(attr => {
+                if(attr.name.startsWith("jolt-")){
+                    joltElements.push({element: element,
+                                    eventName: attr.name.replace("jolt-", ""),
+                                    methodName: attr.value})
+                }
+            })
+        });
+        return allElements;
     }
 
     async _setEventListeners(){
-        let allEventTypes = {
-            'jolt-click': 'click',
-            'jolt-dblclick': 'dblclick',
-            'jolt-hover': 'mouseover',
-            'jolt-change': 'change',
-            'jolt-input': 'input',
-            'jolt-focusout': 'focusout'
-        }
-        for(let eventType in allEventTypes){
-            let allElems = [...this.DOM.querySelectorAll(`[${eventType}]`)]
-            for(let elem of allElems){
-                elem.addEventListener(`${allEventTypes[eventType]}`, async function(event){
-                    let args = this._getArgs(elem, `${eventType}`)
-                    if(args) await this.methods[elem.getAttribute(`${eventType}`)].bind(this)(elem, args, event, this._app._data);
-                    else await this.methods[elem.getAttribute(`${eventType}`)].bind(this)(elem, event, this._app._data);
-                }.bind(this))
-            }
+        const allElements = this.getElementsWithJoltEvent();
+        for(let joltElement of allElements){
+            const elem = joltElement.elements;
+            const eventName = joltElement.eventName;
+            const methodName = joltElement.methodName;
+            elem.addEventListener(eventName, async function(event){
+                let args = this._getAllArgs(elem)
+                await this.methods[methodName].bind(this)(elem, args, event);
+            }.bind(this))
         }
     }
 
@@ -117,14 +139,20 @@ class Component {
         }
     }
 
+    get appDOM(){
+        return document.querySelector(this._app.DOM);
+    }
+
     get DOM(){
         return document.querySelector(this.container);;
     }
 
     async _reloadComponent() {
         const markup = await this._template();
-        document.querySelector(this.container).innerHTML = '';
-        document.querySelector(this.container).innerHTML = markup;
+        if(this.renderOptions.delete){
+            document.querySelector(this.container).innerHTML = '';
+        }
+        document.querySelector(this.container).insertAdjacentHTML(this.renderOptions.insert, markup);
         await this._setEventListeners();
         await this._setAnimations();
         for(let component in this.subcomponents){
@@ -163,9 +191,9 @@ class Component {
 
     getData(field){
         if(field in this._app._data){
-            return this._app.getData(field)
+            return this._app.getData(field);
         }
-        throw new Error('Not a valid data field')
+        throw new DataError('Not a valid data field');
     }
 
     get parent(){
@@ -191,8 +219,10 @@ class Component {
             await this.beforeGenerate[method].bind(this)();
         }
         const template = await this._template();
-        document.querySelector(this.container).innerHTML = '';
-        document.querySelector(this.container).insertAdjacentHTML('afterbegin', template);
+        if(this.renderOptions.delete){
+            document.querySelector(this.container).innerHTML = '';
+        }
+        document.querySelector(this.container).insertAdjacentHTML(this.renderOptions.insert, template);
         await this._setEventListeners();
         await this._setAnimations();
         for(const component of Object.keys(this.subcomponents)){
