@@ -8,6 +8,7 @@ class App{
     index;
     _data;
     _queryParams;
+    _hash;
     _dataMapping = {};
     beforeStart = {};
     afterStart = {};
@@ -120,6 +121,14 @@ class App{
 
     get queryParams(){
         return this._queryParams;
+    }
+
+    set hash(hash){
+        this._hash = hash;
+    }
+
+    get hash(){
+        return this._hash;
     }
 
     /**

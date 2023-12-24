@@ -193,6 +193,10 @@ class Component {
         return this._app.getQueryParams();
     }
 
+    get hash(){
+        return this._app.hash;
+    }
+
     async setData(field, data){
         await this._app.setData(field, data)
     }

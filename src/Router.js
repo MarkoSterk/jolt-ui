@@ -47,12 +47,10 @@ class Router {
             if(event.target.tagName.toLowerCase() !== "a"){
                 const closestJoltNav = event.target.closest("jolt-nav");
                 const closestAtag = event.target.closest("a");
-                if(closestJoltNav && closestAtag){
-                    if(closestJoltNav.contains(closestAtag) && closestAtag.getAttribute("target") !== "_blank"){
-                        event.preventDefault();
-                        history.pushState(null, '', closestAtag.href);
-                        this._onUrlChange(event);
-                    }
+                if(closestJoltNav?.contains(closestAtag) && closestAtag?.getAttribute("target") !== "_blank"){
+                    event.preventDefault();
+                    history.pushState(null, '', closestAtag.href);
+                    this._onUrlChange(event);
                 }
             }else{
                 if(event.target.getAttribute("target") !== "_blank"){
@@ -61,7 +59,9 @@ class Router {
                     this._onUrlChange(event);
                 }
             }
-            
+        });
+        window.addEventListener("popstate", (event) => {
+            this._onUrlChange(event)
         })
     }
 
@@ -73,9 +73,10 @@ class Router {
      * Url type router. Gets current route path and query parameters based on the url path
      * @returns currentPath - the current path from the pathname part of the url.
      */
-    _getRouteAndQueryParamsUrl = () => {
+    _getRouteQueryParamsAndHashUrl = () => {
         let currentPath = window.location.pathname; //current path name
         let queryParams = window.location.search; //query parameters
+        this.app.hash = window.location.hash;
         this.app.queryParams = queryParams; //sets query parameters
         return currentPath;
     }
@@ -89,9 +90,14 @@ class Router {
         if(this.configs.routerType === "hash"){
             routePath = this._getRouteAndQueryParamsHash().substring(1);
         }else if(this.configs.routerType === "url"){
-            routePath = this._getRouteAndQueryParamsUrl().substring(1);
+            routePath = this._getRouteQueryParamsAndHashUrl().substring(1);
         } else{
             throw new RouterTypeError("Wrong router type configuration.");
+        }
+        if((routePath === "/" || routePath === "") && !Object.keys(this.paths).includes(routePath)){
+            if(this.app.index){
+                routePath = this.app.index;
+            }
         }
         return routePath;
     }
@@ -118,20 +124,28 @@ class Router {
      * Deconstructs components on the previous route.
      * @param {*} oldPath old path of the router
      */
-    _deconstructPathComponents = async (oldPath) => {
+    _deconstructPathComponents = async (oldPath, newPath) => {
+        if(!newPath){
+            newPath = [];
+        }
         const oldPathReversed = oldPath.slice().reverse()
         for(let component of oldPathReversed){
+            if(newPath.includes(component)){
+                break;
+            }
             await component.deconstructComponent();
         }
     }
 
     /**
-     * Constructs components for the new router path 
+     * Constructs components for the new route path 
      * @param {*} newPath new path of the router
      */
     _constructPathComponents = async (newPath) => {
         for(let component of newPath){
-            await component.generateComponent();
+            if(!component._active){
+                await component.generateComponent();
+            }
         }
     }
 
@@ -163,7 +177,7 @@ class Router {
             this.unknownView.deconstructComponent();
             this.unknownViewActive = false;
         } else{
-            await this._deconstructPathComponents(this.paths[this.currentView]);
+            await this._deconstructPathComponents(this.paths[this.currentView], this.paths[routePath]);
         }
         await this._constructPathComponents(this.paths[routePath]);
         this.currentView = routePath;
