@@ -1,4 +1,5 @@
 import { RouterTypeError, RouteError } from "./Errors";
+import JoltNav from "./customElements/joltNav";
 
 class Router {
         /**
@@ -16,7 +17,16 @@ class Router {
         this.app = app
         this.app._router = this;
         this.configs = configs;
-        window.addEventListener('popstate', (event) => {this._onUrlChange(event)});
+        if(configs.routerType === "url"){
+            this._urlRouterType();
+        }else if(configs.routerType === "hash"){
+           this._hashRouterType();
+        }else{
+            throw new RouterTypeError("Wrong router type configuration.")
+        }
+        this._registerCustomElements({
+            JoltNav
+        });
     }
 
     /**
@@ -27,8 +37,36 @@ class Router {
         let currentUrl = window.location.hash; //current hash with query parameters
         let hashAndQueryParams = currentUrl.split("?"); //splits along the "?"
         let queryParams = hashAndQueryParams[1] ? hashAndQueryParams[1] : ""; //if the list has index 1 == query params
-        this.app.setQueryParams(queryParams); //sets query parameters
+        this.app.queryParams = queryParams; //sets query parameters
         return hashAndQueryParams[0]; //at index 0 is the hash path
+    }
+
+    _urlRouterType(){
+        window.addEventListener('click', (event) => {
+            //if clicked element is of type "a" and target attribute is not "_blank"
+            if(event.target.tagName.toLowerCase() !== "a"){
+                const closestJoltNav = event.target.closest("jolt-nav");
+                const closestAtag = event.target.closest("a");
+                if(closestJoltNav && closestAtag){
+                    if(closestJoltNav.contains(closestAtag) && closestAtag.getAttribute("target") !== "_blank"){
+                        event.preventDefault();
+                        history.pushState(null, '', closestAtag.href);
+                        this._onUrlChange(event);
+                    }
+                }
+            }else{
+                if(event.target.getAttribute("target") !== "_blank"){
+                    event.preventDefault();
+                    history.pushState(null, '', event.target.href)
+                    this._onUrlChange(event);
+                }
+            }
+            
+        })
+    }
+
+    _hashRouterType(){
+        window.addEventListener('popstate', (event) => {this._onUrlChange(event)});
     }
 
     /**
@@ -38,7 +76,7 @@ class Router {
     _getRouteAndQueryParamsUrl = () => {
         let currentPath = window.location.pathname; //current path name
         let queryParams = window.location.search; //query parameters
-        this.app.setQueryParams(queryParams); //sets query parameters
+        this.app.queryParams = queryParams; //sets query parameters
         return currentPath;
     }
 
@@ -49,9 +87,9 @@ class Router {
     _getRouteAndQueryParams = () => {
         let routePath;
         if(this.configs.routerType === "hash"){
-            routePath = this._getRouteAndQueryParamsHash();
+            routePath = this._getRouteAndQueryParamsHash().substring(1);
         }else if(this.configs.routerType === "url"){
-            routePath = this._getRouteAndQueryParamsUrl();
+            routePath = this._getRouteAndQueryParamsUrl().substring(1);
         } else{
             throw new RouterTypeError("Wrong router type configuration.");
         }
@@ -63,9 +101,6 @@ class Router {
      * @param {*} event - popstate event automatically provided
      */
     _onUrlChange = (event) => {
-        if(this.configs.routerType === "url"){
-            event.preventDefault();
-        }
         const routePath = this._getRouteAndQueryParams();
         if(Object.keys(this.paths).includes(routePath)){
             this._changeView(routePath);
@@ -132,6 +167,13 @@ class Router {
         }
         await this._constructPathComponents(this.paths[routePath]);
         this.currentView = routePath;
+    }
+
+    _registerCustomElements(elements){
+        for(const name in elements){
+            const element = elements[name];
+            customElements.define(element.tagName, element);
+        }
     }
 
     /**

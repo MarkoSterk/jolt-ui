@@ -1,4 +1,6 @@
-import { ComponentConstructorError, DataError, RenderOptionsError } from "./Errors";
+import { ComponentConstructorError, DataError,
+        RenderOptionsError, ComponentContainerError,
+        ReservedKeywordError } from "./Errors";
 
 class Component {
     /**
@@ -10,7 +12,6 @@ class Component {
    * @param {Array} intervalMethods array of arrays [method, intervalDuration] for methods that need to run repeatedly
    * @param {Component} parent Parent component if this component is a subcomponent or childcomponent
    * @param {object} methods Object with methods which extend component functionality. Used to create event listeners. Each method gets "this" (component) bound.
-   * @param {object} properties Object with any additional data that the new component might need
    * @param {object} beforeGenerate Object with methods that should run before the component is generated and displayed. Fetching of data/api calls for example.
    * @param {object} afterGenerate Object with methods that should run after the component is generated. Should not include any data fetching because that would trigger a component reload
    * @param {object} beforeDeconstruct Object with methods that should run before the component is deconstructed. Can include custom data cleaning or other stuff.
@@ -50,8 +51,12 @@ class Component {
     _app;
     _data;
     _queryParams;
+    _domParser;
 
     constructor(configs) {
+        if(configs.properties){
+            throw new ReservedKeywordError("Reserved keyword error", "properties");
+        }
         if(configs.container === undefined || configs.name === undefined || configs.markup === undefined){
             throw new ComponentConstructorError("Failed to construct component. Missing configurations.");
         }
@@ -61,6 +66,7 @@ class Component {
             }
         }
         Object.assign(this, configs)
+        this._domParser = new DOMParser();
     }
 
     validateConfigData(value, valueType){
@@ -71,12 +77,17 @@ class Component {
         return await this.markup.bind(this)();
     }
 
-    async _setAnimations(){
-        let allElems = [...document.querySelector(this.container).querySelectorAll('[animate]')];
+    async _setAnimations(parsedTemplate){
+        let allElems = [...parsedTemplate.querySelectorAll('[animate]')];
         for(let elem of allElems){
             let args = this._getAllArgs(elem)
-            this.methods[elem.getAttribute('animate')].bind(this)(elem, args);
+            if(Object.keys(args).length > 0){
+                this.methods[elem.getAttribute('animate')].bind(this)(elem, args);
+            }else{
+                this.methods[elem.getAttribute('animate')].bind(this)(elem);
+            }
         }
+        return parsedTemplate;
     }
 
     _getAllArgs(elem){
@@ -95,10 +106,9 @@ class Component {
         }, {});
     }
 
-    getElementsWithJoltEvent(){
-        const allElements = this.DOM.querySelectorAll("*");
+    getElementsWithJoltEvent(parsedTemplate){
+        const allElements = parsedTemplate.querySelectorAll("*");
         const joltElements = [];
-
         allElements.forEach(element => {
             Array.from(element.attributes).forEach(attr => {
                 if(attr.name.startsWith("jolt-")){
@@ -108,20 +118,25 @@ class Component {
                 }
             })
         });
-        return allElements;
+        return joltElements;
     }
 
-    async _setEventListeners(){
-        const allElements = this.getElementsWithJoltEvent();
-        for(let joltElement of allElements){
-            const elem = joltElement.elements;
+    async _setEventListeners(parsedTemplate){
+        const joltElements = this.getElementsWithJoltEvent(parsedTemplate);
+        for(let joltElement of joltElements){
+            const elem = joltElement.element;
             const eventName = joltElement.eventName;
             const methodName = joltElement.methodName;
             elem.addEventListener(eventName, async function(event){
                 let args = this._getAllArgs(elem)
-                await this.methods[methodName].bind(this)(elem, args, event);
+                if(Object.keys(args).length != 0){
+                    await this.methods[methodName].bind(this)(elem, args, event);
+                }else{
+                    await this.methods[methodName].bind(this)(elem, event);
+                }
             }.bind(this))
         }
+        return parsedTemplate;
     }
 
     async _registerApp(app){
@@ -140,21 +155,22 @@ class Component {
     }
 
     get appDOM(){
-        return document.querySelector(this._app.DOM);
+        return this._app.DOM;
     }
 
     get DOM(){
         return document.querySelector(this.container);;
     }
 
+    get properties(){
+        return this._app.properties;
+    }
+
     async _reloadComponent() {
-        const markup = await this._template();
-        if(this.renderOptions.delete){
-            document.querySelector(this.container).innerHTML = '';
-        }
-        document.querySelector(this.container).insertAdjacentHTML(this.renderOptions.insert, markup);
-        await this._setEventListeners();
-        await this._setAnimations();
+        const template = await this._template();
+        let parsedTemplate = this._domParser.parseFromString(template, "text/html");
+        parsedTemplate = await this.hydrate(parsedTemplate)
+        await this.insertHtmlElements(parsedTemplate);
         for(let component in this.subcomponents){
             await this.subcomponents[component]._reloadComponent()
         }
@@ -214,17 +230,34 @@ class Component {
         }
     }
 
+    async hydrate(parsedTemplate){
+        parsedTemplate = await this._setEventListeners(parsedTemplate);
+        parsedTemplate = await this._setAnimations(parsedTemplate);
+        return parsedTemplate
+    }
+
+    async insertHtmlElements(parsedTemplate){
+        const parsedElements = Array.from(parsedTemplate.body.childNodes)
+                                    .filter(node => node.nodeType === Node.ELEMENT_NODE);
+        const container = document.querySelector(this.container);
+        if(!container){
+            throw new ComponentContainerError("Could not find component container", this.name, this.container);
+        }
+        if(parsedElements){
+            parsedElements.reverse().forEach(node => {
+                container.insertAdjacentElement(this.renderOptions.insert, node);
+            })
+        }
+    }
+
     async generateComponent() {
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
         }
         const template = await this._template();
-        if(this.renderOptions.delete){
-            document.querySelector(this.container).innerHTML = '';
-        }
-        document.querySelector(this.container).insertAdjacentHTML(this.renderOptions.insert, template);
-        await this._setEventListeners();
-        await this._setAnimations();
+        let parsedTemplate = this._domParser.parseFromString(template, "text/html");
+        parsedTemplate = await this.hydrate(parsedTemplate)
+        await this.insertHtmlElements(parsedTemplate);
         for(const component of Object.keys(this.subcomponents)){
             await this.subcomponents[component].generateComponent();
         }

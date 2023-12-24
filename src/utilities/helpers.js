@@ -1,5 +1,5 @@
-const html = String.raw;
+/**
+ * Helper methods and objects for easier work
+ */
 
-export {
-    html
-}
+export const html = String.raw;

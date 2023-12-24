@@ -1,4 +1,4 @@
-import { DataError, InitializationError, AppConstructorError } from "./Errors";
+import { DataError, InitializationError, AppConstructorError, AppStartError } from "./Errors";
 
 class App{
     name;
@@ -34,6 +34,7 @@ class App{
             this.container = configs.container;
             this.name = configs.name
             this._data = configs.data
+            this.properties = configs.properties;
             for(let dataField in this._data){
                 this._dataMapping[dataField] = [];
             }
@@ -195,13 +196,24 @@ class App{
         return document.querySelector(this.container);;
     }
 
+    get properties(){
+        return this.properties;
+    }
+
+    async _startComponents(routePath){
+        const pathComponents = this._registeredPaths[routePath];
+        for(const component of pathComponents){
+            if(component) await component.generateComponent();
+        }
+    }
+
     async start(routePath){
         /**
          * Starts the app and loads first/index component. Defaults to the index component if set, otherwise loads first component in components.
-         * @param {String} route String name or hash of the start component
+         * @param {String} routePath String name or hash of the start component
          */
         try{
-            let visitedRoute = routePath;
+            let visitedRoute;
             for(let method in this.beforeStart){
                 await this.beforeStart[method].bind(this)()
             }
@@ -209,20 +221,20 @@ class App{
                 await this.staticComponents[component].generateComponent();
             }
             if(routePath && Object.keys(this._registeredPaths).includes(routePath)){
-                const pathComponents = this._registeredPaths[routePath];
-                for(const component of pathComponents){
-                    if(component) await component.generateComponent();
-                }
-                return routePath;
+                this._startComponents(routePath);
+                visitedRoute = routePath;
             }
             else if(this.index){
-                await this.components[this.index].component.generateComponent();
+                this._startComponents(this.index);
                 visitedRoute = this.index;
             }
+            else if(this._router.unknownView){
+                this._router.unknownView.generateComponent();
+                this._router.unknownViewActive = true;
+                visitedRoute = routePath;
+            }
             else{
-                route = Object.keys(this.components)[0]
-                await this.components[route].component.generateComponent();
-                visitedRoute = route;
+                throw new AppStartError("App failed to start");
             }
             for(let method in this.afterStart){
                 await this.afterStart[method].bind(this)()

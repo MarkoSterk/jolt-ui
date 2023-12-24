@@ -1,9 +1,9 @@
-import App from "./src/App";
-import Component from "./src/Component";
-import Router from "./src/Router";
+/**
+ * Entry point for the Jolt-UI framework.
+ * 
+ */
+export * from "./src/utilities/helpers.js";
 
-export {
-    App,
-    Component,
-    Router
-};
+export { default as App } from "./src/App.js";
+export { default as Component } from "./src/Component.js";
+export { default as Router } from "./src/Router.js";
