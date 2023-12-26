@@ -1,7 +1,9 @@
-import { DataError, InitializationError, AppConstructorError, AppStartError } from "./Errors";
+import { DataError, InitializationError, AppConstructorError,
+        AppStartError, ComponentReloadError } from "./Errors";
 
 class App{
     name;
+    container;
     properties;
     staticComponents;
     components;
@@ -14,6 +16,7 @@ class App{
     afterStart = {};
     _activeComponents = [];
     _registeredPaths = [];
+    _registeredPathsKeys = [];
     _router;
 
     /**
@@ -27,17 +30,18 @@ class App{
      * @param {Object} configs configuration object with key-value pairs
      */
     constructor(configs){
-        if(configs.container === undefined ||
-        configs.name === undefined || configs.data === undefined){
+        if(configs.container === undefined || configs.name === undefined){
             throw new AppConstructorError("Missing application configurations.")
         }
         try{
             this.container = configs.container;
             this.name = configs.name
-            this._data = configs.data
             this.properties = configs.properties;
-            for(let dataField in this._data){
-                this._dataMapping[dataField] = [];
+            if(configs.data !== undefined){
+                this._data = configs.data
+                for(let dataField in this._data){
+                    this._dataMapping[dataField] = [];
+                }
             }
             if(configs["beforeStart"] !== undefined){
                 this.beforeStart = configs.beforeStart;
@@ -66,29 +70,27 @@ class App{
     }
 
     /**
-     * Extracts all components paths including subpaths with children components
+     * Extracts all components paths including subpaths and components
      * @param {Object} data object with key-value pairs corresponding to routing paths
      * @param {String} currentPath current path; default = ""
      * @returns 
      */
     _extractPathsAndComponents(data, currentPath = "") {
         const result = {};
-
         for (const key in data) {
             const newPath = currentPath ? `${currentPath}/${key}` : key;
             const component = data[key].component;
-            const children = data[key].children;
+            const paths = data[key].paths;
             if (component !== null) {
                 result[newPath] = [component];
             }
-            if (children) {
-                const childResult = this._extractPathsAndComponents(children, newPath);
+            if (paths) {
+                const childResult = this._extractPathsAndComponents(paths, newPath);
                 for (const childKey in childResult) {
                     result[childKey] = [component, ...childResult[childKey]];
                 }
             }
         }
-
         return result;
     }
 
@@ -109,26 +111,8 @@ class App{
     */
     async addPaths(components){
         this._registeredPaths = this._extractPathsAndComponents(components);
+        this._registeredPathsKeys = Object.keys(this._registeredPaths);
         this._registerAppToComponents();
-    }
-
-    /**
-     * @param {Object} params Object with key-value pairs corresponding to query parameters
-     */
-    set queryParams(params){
-        this._queryParams = params;
-    }
-
-    get queryParams(){
-        return this._queryParams;
-    }
-
-    set hash(hash){
-        this._hash = hash;
-    }
-
-    get hash(){
-        return this._hash;
     }
 
     /**
@@ -169,7 +153,7 @@ class App{
                 try{
                     await component._reloadData(data);
                 }catch(err){
-                    throw err;
+                    throw new ComponentReloadError("Component failed to reload.");
                 }
             }
             return true;
@@ -189,31 +173,21 @@ class App{
         throw new DataError(`${dataField} is not a valid data field!`)
     }
 
+    async _startComponents(routePath){
+        const pathComponents = this._registeredPaths[routePath];
+        for(const component of pathComponents){
+            if(component){
+                await component.generateComponent();
+            }
+        }
+    }
+
     /**
      * Sets default/index component of app.
      * @param {String} path of the index component
      */
     setIndex(index){
         this.index = index
-    }
-
-    get path(){
-        return this._router.currentView;
-    }
-
-    get DOM(){
-        return document.querySelector(this.container);;
-    }
-
-    get properties(){
-        return this.properties;
-    }
-
-    async _startComponents(routePath){
-        const pathComponents = this._registeredPaths[routePath];
-        for(const component of pathComponents){
-            if(component) await component.generateComponent();
-        }
     }
 
     async start(routePath){
@@ -229,7 +203,10 @@ class App{
             for(let component in this.staticComponents){
                 await this.staticComponents[component].generateComponent();
             }
-            if(routePath && Object.keys(this._registeredPaths).includes(routePath)){
+            if(this._registeredPathsKeys.length == 0){
+                return;
+            }
+            if(routePath && this._registeredPathsKeys.includes(routePath)){
                 this._startComponents(routePath);
                 visitedRoute = routePath;
             }
@@ -252,6 +229,42 @@ class App{
         }catch(err){
             throw new InitializationError("App failed to start.");
         }
+    }
+
+    //setters and getters
+    get path(){
+        return this._router.currentView;
+    }
+
+    get DOM(){
+        return document.querySelector(this.container);;
+    }
+
+    get properties(){
+        return this.properties;
+    }
+
+    get data(){
+        return this._data;
+    }
+
+    /**
+     * @param {Object} params Object with key-value pairs corresponding to query parameters
+     */
+    set queryParams(params){
+        this._queryParams = params;
+    }
+
+    get queryParams(){
+        return this._queryParams;
+    }
+
+    set hash(hash){
+        this._hash = hash;
+    }
+
+    get hash(){
+        return this._hash;
     }
 }
 

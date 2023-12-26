@@ -1,8 +1,8 @@
-import { RouterTypeError, RouteError } from "./Errors";
+import { RouterTypeError, RouteError, RouterConfigError } from "./Errors";
 import JoltNav from "./customElements/joltNav";
 
 class Router {
-        /**
+    /**
    * Main Router class. Listenes and handles routing of the app via a hashchange event listener.
    * @param {Object} app instance of the App class
    * @param {Object} configs object with configurations for the router. Must contain the selected router type: hash or url
@@ -16,6 +16,9 @@ class Router {
     constructor(app, configs) {
         this.app = app
         this.app._router = this;
+        if(configs === undefined){
+            throw new RouterConfigError("Router configuration error.");
+        }
         this.configs = configs;
         if(configs.routerType === "url"){
             this._urlRouterType();
@@ -42,31 +45,18 @@ class Router {
     }
 
     _urlRouterType(){
-        window.addEventListener('click', (event) => {
-            //if clicked element is of type "a" and target attribute is not "_blank"
-            if(event.target.tagName.toLowerCase() !== "a"){
-                const closestJoltNav = event.target.closest("jolt-nav");
-                const closestAtag = event.target.closest("a");
-                if(closestJoltNav?.contains(closestAtag) && closestAtag?.getAttribute("target") !== "_blank"){
-                    event.preventDefault();
-                    history.pushState(null, '', closestAtag.href);
-                    this._onUrlChange(event);
-                }
-            }else{
-                if(event.target.getAttribute("target") !== "_blank"){
-                    event.preventDefault();
-                    history.pushState(null, '', event.target.href)
-                    this._onUrlChange(event);
-                }
-            }
+        this.app.DOM.addEventListener(JoltNav.navEventName, (event) => {
+            history.pushState(null, '', event.detail.navLink.href);
+            this._onUrlChange(event);
+            return;
         });
-        window.addEventListener("popstate", (event) => {
+        this.app.DOM.addEventListener("popstate", (event) => {
             this._onUrlChange(event)
         })
     }
 
     _hashRouterType(){
-        window.addEventListener('popstate', (event) => {this._onUrlChange(event)});
+        this.app.DOM.addEventListener('popstate', (event) => {this._onUrlChange(event)});
     }
 
     /**
@@ -102,21 +92,36 @@ class Router {
         return routePath;
     }
 
+    _routeToRegExp(path){
+        const regexPattern = path.replace(/:string/g, '[^/]+');
+        return new RegExp(`^${regexPattern}$`);
+    }
+
     /**
      * Changes view based on the current path (url of hash)
      * @param {*} event - popstate event automatically provided
      */
     _onUrlChange = (event) => {
         const routePath = this._getRouteAndQueryParams();
-        if(Object.keys(this.paths).includes(routePath)){
+        //checks direct match for route
+        if(this.pathKeys.includes(routePath)){
             this._changeView(routePath);
+            return;
         }
-        else{
-            try{
-                this._unknownView();
-            }catch(err){
-                throw new RouteError("Route error. Requested route or unknownView route not found.")
+
+        //check for patterns
+        for(let route of this.pathKeys){
+            const routeRegex = this._routeToRegExp(route);
+            if(routeRegex.test(routePath)){
+                this._changeView(route);
+                return;
             }
+        }
+
+        try{
+            this._unknownView();
+        }catch(err){
+            throw new RouteError("Route error. Requested route or unknownView route not found.")
         }
     }
 
@@ -214,18 +219,23 @@ class Router {
     }
 
     /**
+     * Starts the application
+     */
+    start = async () => {
+        const route = this._getRouteAndQueryParams();
+        this.currentView = await this.app.start(route);
+    }
+
+    //setters and getters
+    /**
      * Returns all registered application paths for navigation
      */
     get paths(){
         return this.app._registeredPaths;
     }
 
-    /**
-     * Starts the application
-     */
-    start = async () => {
-        const route = this._getRouteAndQueryParams();
-        this.currentView = await this.app.start(route);
+    get pathKeys(){
+        return this.app._registeredPathsKeys;
     }
 }
 

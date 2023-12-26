@@ -1,6 +1,7 @@
 import { ComponentConstructorError, DataError,
         RenderOptionsError, ComponentContainerError,
-        ReservedKeywordError } from "./Errors";
+        ReservedKeywordError, DataMappingError } from "./Errors";
+import dot from "dot";
 
 class Component {
     /**
@@ -23,11 +24,13 @@ class Component {
     markup;
     renderOptions = {
         delete: true,
-        insert: "afterbegin"
+        insert: "afterbegin",
+        template_name: null,
+        cache: false,
+        useEngine: false
     }
 
     subcomponents = {};
-    childcomponents = {};
 
     beforeGenerate = {};
     afterGenerate = {};
@@ -52,6 +55,8 @@ class Component {
     _data;
     _queryParams;
     _domParser;
+    _templateFn;
+    _templateCache;
 
     constructor(configs) {
         if(configs.properties){
@@ -143,33 +148,24 @@ class Component {
         if(!this._app){
             this._app = app;
             if(this.dataField){
-                this._app._dataMapping[this.dataField].push(this);
+                try{
+                    this._app._dataMapping[this.dataField].push(this);
+                }catch(err){
+                    throw new DataMappingError("Data mapping error", this.name, this.dataField);
+                }
             }
             for(let subcomponent in this.subcomponents){
                 await this.subcomponents[subcomponent]._registerApp(app);
             }
-            for(let child in this.childcomponents){
-                await this.childcomponents[child]._registerApp(app);
-            }
         }
     }
 
-    get appDOM(){
-        return this._app.DOM;
-    }
 
-    get DOM(){
-        return document.querySelector(this.container);;
-    }
-
-    get properties(){
-        return this._app.properties;
-    }
 
     async _reloadComponent() {
         const template = await this._template();
         let parsedTemplate = this._domParser.parseFromString(template, "text/html");
-        parsedTemplate = await this.hydrate(parsedTemplate)
+        parsedTemplate = await this._hydrate(parsedTemplate)
         await this.insertHtmlElements(parsedTemplate);
         for(let component in this.subcomponents){
             await this.subcomponents[component]._reloadComponent()
@@ -181,43 +177,12 @@ class Component {
         if(this._active === true && this.reloadOnDataChange != false) await this._reloadComponent()
     }
 
-    setQueryParams(params){
-        this._app.setQueryParams(params);
-    }
-
-    get path(){
-        return this._app.path;
-    }
-
-    get queryParams(){
-        return this._app.getQueryParams();
-    }
-
-    get hash(){
-        return this._app.hash;
+    getData(field){
+        return this._app.getData(field);
     }
 
     async setData(field, data){
         await this._app.setData(field, data)
-    }
-
-    set data(data){
-        this._data = data
-    }
-
-    get data(){
-        return this._data
-    }
-
-    getData(field){
-        if(field in this._app._data){
-            return this._app.getData(field);
-        }
-        throw new DataError('Not a valid data field');
-    }
-
-    get parent(){
-        return this._parent
     }
 
     registerSubcomponents(subcomponents){
@@ -227,14 +192,7 @@ class Component {
         }
     }
 
-    registerChildcomponents(childcomponents){
-        this.childcomponents = childcomponents
-        for(let child in this.childcomponents){
-            this.childcomponents[child]._parent = this;
-        }
-    }
-
-    async hydrate(parsedTemplate){
+    async _hydrate(parsedTemplate){
         parsedTemplate = await this._setEventListeners(parsedTemplate);
         parsedTemplate = await this._setAnimations(parsedTemplate);
         return parsedTemplate
@@ -254,13 +212,24 @@ class Component {
         }
     }
 
+    _templatingEngine(template){
+        if(!this._templateFn && this.renderOptions?.useEngine){
+            this._templateFn = dot.template(template);
+        }
+        if(this.renderOptions?.useEngine){
+            template = this._templateFn(this._app.data);
+        }
+        return template
+    }
+
     async generateComponent() {
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
         }
-        const template = await this._template();
+        let template = await this._template();
+        template = this._templatingEngine(template)
         let parsedTemplate = this._domParser.parseFromString(template, "text/html");
-        parsedTemplate = await this.hydrate(parsedTemplate)
+        parsedTemplate = await this._hydrate(parsedTemplate)
         await this.insertHtmlElements(parsedTemplate);
         for(const component of Object.keys(this.subcomponents)){
             await this.subcomponents[component].generateComponent();
@@ -307,6 +276,55 @@ class Component {
 
     async forceReload(){
         await this._reloadComponent()
+    }
+
+    //setters and getters
+    get parent(){
+        return this._parent
+    }
+
+    set templateCache(cache){
+        this._templateCache = cache;
+    }
+
+    get templateCache(){
+        return this._templateCache;
+    }
+
+    set queryParams(params){
+        this._app.queryParams = params;
+    }
+
+    get queryParams(){
+        return this._app.queryParams;
+    }
+
+    get path(){
+        return this._app.path;
+    }
+
+    get hash(){
+        return this._app.hash;
+    }
+
+    set data(data){
+        this._data = data
+    }
+
+    get data(){
+        return this._data
+    }
+
+    get appDOM(){
+        return this._app.DOM;
+    }
+
+    get DOM(){
+        return document.querySelector(this.container);;
+    }
+
+    get properties(){
+        return this._app.properties;
     }
 }
 

@@ -4,7 +4,7 @@ export class AppConstructorError extends Error {
         this.name = "App constructor error";
         this.description = `
             App constructor failed. Please check if all required configuration fields are present.
-            Required fields are: container (String), name (String) and data (Object)
+            Required fields are: container (String) and name (String)
         `
     }
     toString() {
@@ -60,6 +60,35 @@ export class DataError extends Error{
         this.description = `
             Data error. There was an error in the app data fields. Either a component want's to listen
             to an undefined data field or a component want's to set an undefined data field.
+        `
+    }
+
+    toString() {
+        return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
+    }
+}
+
+export class DataMappingError extends Error{
+    constructor(message, componentName, dataField){
+        super(message);
+        this.name = "Data mapping error";
+        this.description = `
+            Could not map component (${componentName}) data field name (${dataField}) to application data object.
+            Please check if you provided the right data field name.
+        `
+    }
+
+    toString() {
+        return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
+    }
+}
+
+export class RouterConfigError extends Error{
+    constructor(message){
+        super(message);
+        this.name = "Router configuration error";
+        this.description = `
+            Router configuration error. Missing or invalid router configuration object.
         `
     }
 
@@ -136,6 +165,36 @@ export class ComponentContainerError extends Error{
         this.description = `
             Component container error. Could not find container with name ${container} for component with name ${componentName}.
             Check if you specified the container for the component and if the container is present.
+        `
+    }
+
+    toString() {
+        return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
+    }
+}
+
+export class ComponentReloadError extends Error{
+    constructor(message, componentName){
+        super(message);
+        this.name = "Failed to reload component";
+        this.description = `
+            Failed to reload component ${componentName}. Error happened during component reload triggered manually or 
+            automatically by data changes.
+        `
+    }
+    
+    toString() {
+        return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
+    }
+}
+
+export class GetTemplateError extends Error{
+    constructor(message, componentName){
+        super(message);
+        this.name = "Failed to get component template";
+        this.description = `
+            Failed to get component (${componentName}) template. The template render function did not produce a valid template.
+            Please check method and/or configurations and component meta data in case you use the build-in getTemplate method.
         `
     }
 
