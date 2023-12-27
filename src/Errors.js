@@ -18,8 +18,7 @@ export class InitializationError extends Error{
         super(message);
         this.name = "App initialization error";
         this.description = `
-            App constructor failed. Please check if all required configuration fields are present.
-            Required fields are: container (String), name (String) and data (Object)
+            App failed to initialize all components/methods at start time. Please check all configurations.
         `
     }
 
@@ -50,6 +49,10 @@ export class ReservedKeywordError extends Error{
         this.description = `
             The keyword ${key} is a reserved property for the application object and can't be used on the Component object.
         `
+    }
+
+    toString() {
+        return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
     }
 }
 

@@ -46,7 +46,7 @@ class Component {
     methods = {};
     metaData = {};
     dataField;
-    reloadOnDataChange;
+    reloadOnDataChange = true;
 
     _active = false;
     _parent
@@ -111,7 +111,7 @@ class Component {
         }, {});
     }
 
-    getElementsWithJoltEvent(parsedTemplate){
+    _getElementsWithJoltEvent(parsedTemplate){
         const allElements = parsedTemplate.querySelectorAll("*");
         const joltElements = [];
         allElements.forEach(element => {
@@ -127,7 +127,7 @@ class Component {
     }
 
     async _setEventListeners(parsedTemplate){
-        const joltElements = this.getElementsWithJoltEvent(parsedTemplate);
+        const joltElements = this._getElementsWithJoltEvent(parsedTemplate);
         for(let joltElement of joltElements){
             const elem = joltElement.element;
             const eventName = joltElement.eventName;
@@ -135,7 +135,7 @@ class Component {
             elem.addEventListener(eventName, async function(event){
                 let args = this._getAllArgs(elem)
                 if(Object.keys(args).length != 0){
-                    await this.methods[methodName].bind(this)(elem, args, event);
+                    await this.methods[methodName].bind(this)(elem, event, args);
                 }else{
                     await this.methods[methodName].bind(this)(elem, event);
                 }
@@ -160,20 +160,8 @@ class Component {
         }
     }
 
-
-
-    async _reloadComponent() {
-        const template = await this._template();
-        let parsedTemplate = this._domParser.parseFromString(template, "text/html");
-        parsedTemplate = await this._hydrate(parsedTemplate)
-        await this.insertHtmlElements(parsedTemplate);
-        for(let component in this.subcomponents){
-            await this.subcomponents[component]._reloadComponent()
-        }
-    }
-
     async _reloadData(data){
-        this.data = data
+        this._data = data
         if(this._active === true && this.reloadOnDataChange != false) await this._reloadComponent()
     }
 
@@ -198,12 +186,15 @@ class Component {
         return parsedTemplate
     }
 
-    async insertHtmlElements(parsedTemplate){
+    async _insertHtmlElements(parsedTemplate){
         const parsedElements = Array.from(parsedTemplate.body.childNodes)
                                     .filter(node => node.nodeType === Node.ELEMENT_NODE);
         const container = document.querySelector(this.container);
         if(!container){
             throw new ComponentContainerError("Could not find component container", this.name, this.container);
+        }
+        if(this.renderOptions.delete){
+            container.innerHTML = '';
         }
         if(parsedElements){
             parsedElements.reverse().forEach(node => {
@@ -222,6 +213,17 @@ class Component {
         return template
     }
 
+    async _reloadComponent() {
+        let template = await this._template();
+        template = this._templatingEngine(template)
+        let parsedTemplate = this._domParser.parseFromString(template, "text/html");
+        parsedTemplate = await this._hydrate(parsedTemplate)
+        await this._insertHtmlElements(parsedTemplate);
+        for(let component in this.subcomponents){
+            await this.subcomponents[component]._reloadComponent()
+        }
+    }
+
     async generateComponent() {
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
@@ -230,21 +232,27 @@ class Component {
         template = this._templatingEngine(template)
         let parsedTemplate = this._domParser.parseFromString(template, "text/html");
         parsedTemplate = await this._hydrate(parsedTemplate)
-        await this.insertHtmlElements(parsedTemplate);
+        await this._insertHtmlElements(parsedTemplate);
+        
+        for(let method in this.afterGenerate){
+            await this.afterGenerate[method].bind(this)();
+        }
+
         for(const component of Object.keys(this.subcomponents)){
             await this.subcomponents[component].generateComponent();
         }
+
         for(const intervalMethod of this.intervalMethods){
             let id = setInterval(intervalMethod[0].bind(this), intervalMethod[1]);
             this._intervalMethodsIds.push(id);
         }
-        for(let method in this.afterGenerate){
-            await this.afterGenerate[method].bind(this)();
-        }
+
         for(let method in this.beforeActive){
             await this.beforeActive[method].bind(this)();
         }
+
         this._active = true;
+
         for(let method in this.afterActive){
             await this.afterActive[method].bind(this)();
         }
@@ -264,9 +272,6 @@ class Component {
         document.querySelector(this.container).innerHTML = '';
         for(let method in this.afterDeconstruct){
             await this.afterDeconstruct[method].bind(this)()
-        }
-        for(let method in this.beforeDeactive){
-            await this.beforeDeactive[method].bind(this)()
         }
         this._active = false;
         for(let method in this.afterDeactive){
@@ -307,12 +312,15 @@ class Component {
         return this._app.hash;
     }
 
-    set data(data){
-        this._data = data
-    }
+    // set data(data){
+    //     this._data = data
+    // }
 
     get data(){
-        return this._data
+        if(this.dataField){
+            return this._data
+        }
+        return null;
     }
 
     get appDOM(){
