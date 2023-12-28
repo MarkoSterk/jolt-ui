@@ -1,5 +1,6 @@
 import { RouterTypeError, RouteError, RouterConfigError } from "./Errors";
 import JoltNav from "./customElements/joltNav";
+import Authenticator from "./Authenticator";
 
 class Router {
     /**
@@ -45,6 +46,11 @@ class Router {
     }
 
     _urlRouterType(){
+        this.app.DOM.addEventListener(Authenticator.redirectNavEventName, (event) => {
+            history.pushState(null, '', event.detail.redirectTo);
+            this._onUrlChange(event);
+            return;
+        })
         this.app.DOM.addEventListener(JoltNav.navEventName, (event) => {
             history.pushState(null, '', event.detail.navLink.href);
             this._onUrlChange(event);

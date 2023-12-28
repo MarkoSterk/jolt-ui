@@ -205,3 +205,17 @@ export class GetTemplateError extends Error{
         return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
     }
 }
+
+export class AuthenticatorConstructorError extends Error{
+    constructor(message){
+        super(message);
+        this.name = "Authenticator failed to construct";
+        this.description = `
+            Failed to construct Authenticator. Please check all required configurations options.
+        `
+    }
+
+    toString() {
+        return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
+    }
+}

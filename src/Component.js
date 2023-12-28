@@ -1,6 +1,7 @@
 import { ComponentConstructorError, DataError,
         RenderOptionsError, ComponentContainerError,
         ReservedKeywordError, DataMappingError } from "./Errors";
+import Authenticator from "./Authenticator";
 import dot from "dot";
 
 class Component {
@@ -29,6 +30,8 @@ class Component {
         cache: false,
         useEngine: false
     }
+
+    _authenticationRequired = false;
 
     subcomponents = {};
 
@@ -225,6 +228,9 @@ class Component {
     }
 
     async generateComponent() {
+        if(this._authenticationRequired && !this._app._authenticator._isAuthenticated){
+            return this._app._authenticator._makeUnauthorizedRedirect(this);
+        }
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
         }
@@ -277,6 +283,14 @@ class Component {
         for(let method in this.afterDeactive){
             await this.afterDeactive[method].bind(this)()
         }
+    }
+
+    makeRedirect(path){
+        const redirectEvent = new CustomEvent(Authenticator.redirectNavEventName, {
+            bubbles: true,
+            detail: {redirectTo: path}
+        });
+        this.DOM.dispatchEvent(redirectEvent);
     }
 
     async forceReload(){
@@ -333,6 +347,14 @@ class Component {
 
     get properties(){
         return this._app.properties;
+    }
+
+    get authenticationRequired(){
+        return this._authenticationRequired;
+    }
+
+    set authenticationRequired(authentication){
+        this._authenticationRequired = authentication;
     }
 }
 

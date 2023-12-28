@@ -1,5 +1,6 @@
 import { DataError, InitializationError, AppConstructorError,
         AppStartError, ComponentReloadError } from "./Errors";
+import Authenticator from "./Authenticator";
 
 class App{
     name;
@@ -18,6 +19,7 @@ class App{
     _registeredPaths = [];
     _registeredPathsKeys = [];
     _router;
+    _authenticator;
 
     /**
      * Accepts configuration object with main app configs.
@@ -48,6 +50,9 @@ class App{
             }
             if(configs["afterStart"] !== undefined){
                 this.afterStart = configs.afterStart
+            }
+            if(configs["authenticator"] !== undefined && configs["authenticator"] instanceof Authenticator){
+                configs["authenticator"]._registerApp(this)
             }
         }catch(e){
             throw new AppConstructorError("Failed to initialize application.")
