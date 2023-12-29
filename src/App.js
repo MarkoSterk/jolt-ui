@@ -251,6 +251,13 @@ class App{
         this._authenticator.unsetAuthenticatedUser();
     }
 
+    get isAuthenticated(){
+        if(this._authenticator === undefined){
+            throw new AuthenticatorNotImplemented("Missing authenticator implementation.")
+        }
+        return this._authenticator.isAuthenticated;
+    }
+
     //setters and getters
     get path(){
         return this._router.currentView;

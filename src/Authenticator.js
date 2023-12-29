@@ -15,14 +15,14 @@ class Authenticator{
     _app;
 
     constructor(Configs){
-        if(Configs.unauthorizedRedirect === undefined || typeof Configs.unauthorizedRedirect === "String"){
-            throw new AuthenticatorConstructorError("Missing unauthorizedRedirect for authenticator");
+        if(Configs.unauthenticatedRedirect === undefined || typeof Configs.unauthenticatedRedirect !== "string"){
+            throw new AuthenticatorConstructorError("Missing unauthenticatedRedirect for authenticator");
         }
-        if(Configs.unauthorizedRedirect === undefined || typeof Configs.unauthorizedRedirect === "String"){
-            throw new AuthenticatorConstructorError("Missing authorizedRedirect for authenticator");
+        if(Configs.authenticatedRedirect === undefined || typeof Configs.authenticatedRedirect !== "string"){
+            throw new AuthenticatorConstructorError("Missing authenticatedRedirect for authenticator");
         }
-        this._unauthorizedRedirect = Configs.unauthorizedRedirect;
-        this._authorizedRedirect = Configs.authorizedRedirect;
+        this._unauthenticatedRedirect = Configs.unauthenticatedRedirect;
+        this._authenticatedRedirect = Configs.authenticatedRedirect;
         this._authRoleField = Configs?.authRoleField;
     }
 
@@ -43,13 +43,13 @@ class Authenticator{
         });
     }
 
-    _makeUnauthorizedRedirect(component){
-        const redirectEvent = this._createRedirectEvent(this._unauthorizedRedirect);
+    _makeUnauthenticatedRedirect(component){
+        const redirectEvent = this._createRedirectEvent(this._unauthenticatedRedirect);
         component.DOM.dispatchEvent(redirectEvent);
     }
 
-    _makeAuthorizedRedirect(component){
-        const redirectEvent = this._createRedirectEvent(this._authorizedRedirect);
+    _makeAuthenticatedRedirect(component){
+        const redirectEvent = this._createRedirectEvent(this._authenticatedRedirect);
         component.DOM.dispatchEvent(redirectEvent);
     }
 

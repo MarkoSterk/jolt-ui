@@ -229,7 +229,7 @@ class Component {
 
     async generateComponent() {
         if(this._authenticationRequired && !this._app._authenticator._isAuthenticated){
-            return this._app._authenticator._makeUnauthorizedRedirect(this);
+            return this._app._authenticator._makeUnauthenticatedRedirect(this);
         }
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();

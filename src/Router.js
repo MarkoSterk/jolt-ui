@@ -47,16 +47,21 @@ class Router {
 
     _urlRouterType(){
         this.app.DOM.addEventListener(Authenticator.redirectNavEventName, (event) => {
+            //event listener on app container to detect any redirect events.
+            event.stopPropagation();
             history.pushState(null, '', event.detail.redirectTo);
             this._onUrlChange(event);
             return;
         })
         this.app.DOM.addEventListener(JoltNav.navEventName, (event) => {
+            //event listener on app container to detect any navigation link clicks.
+            event.stopPropagation();
             history.pushState(null, '', event.detail.navLink.href);
             this._onUrlChange(event);
             return;
         });
-        this.app.DOM.addEventListener("popstate", (event) => {
+        window.addEventListener("popstate", (event) => {
+            //event listener on window to detected navigation with browser buttons.
             this._onUrlChange(event)
         })
     }
