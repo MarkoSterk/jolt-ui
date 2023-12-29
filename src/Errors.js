@@ -219,3 +219,14 @@ export class AuthenticatorConstructorError extends Error{
         return `${this.name}: ${this.message}\nDescription: ${this.description.trim()}`;
     }
 }
+
+export class AuthenticatorNotImplemented extends Error{
+    constructor(message){
+        super(message);
+        this.name ="Authenticator not implemented";
+        this.description = `
+            Authenticator is not implemented. Please implement the authenticator first before
+            you call this method.
+        `
+    }
+}

@@ -28,7 +28,6 @@ class Authenticator{
 
     _registerApp(app){
         this._app = app;
-        app._authenticator = this;
     }
 
     _getNestedField(obj, path){
@@ -54,8 +53,14 @@ class Authenticator{
         component.DOM.dispatchEvent(redirectEvent);
     }
 
-    set isAuthenticated(authenticated){
-        this._isAuthenticated = authenticated;
+    setAuthenticatedUser(user){
+        this._isAuthenticated = true;
+        this._user = user;
+    }
+
+    unsetAuthenticatedUser(){
+        this._isAuthenticated = false;
+        this._user = {};
     }
 
     get isAuthenticated(){
@@ -66,12 +71,8 @@ class Authenticator{
         return this._user;
     }
 
-    set user(user){
-        this._user = user;
-    }
-
-    get authRoleField(){
-        return this._getNestedField(this.user);
+    get authRole(){
+        return this._getNestedField(this.user, this._authRoleField);
     }
 }
 

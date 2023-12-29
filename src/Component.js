@@ -330,6 +330,10 @@ class Component {
     //     this._data = data
     // }
 
+    get app(){
+        return this._app;
+    }
+
     get data(){
         if(this.dataField){
             return this._data

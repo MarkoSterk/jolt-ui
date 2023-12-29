@@ -1,5 +1,5 @@
-import { DataError, InitializationError, AppConstructorError,
-        AppStartError, ComponentReloadError } from "./Errors";
+import { DataError, AppConstructorError,
+        AppStartError, ComponentReloadError, AuthenticatorNotImplemented } from "./Errors";
 import Authenticator from "./Authenticator";
 
 class App{
@@ -52,10 +52,11 @@ class App{
                 this.afterStart = configs.afterStart
             }
             if(configs["authenticator"] !== undefined && configs["authenticator"] instanceof Authenticator){
-                configs["authenticator"]._registerApp(this)
+                this._authenticator = configs["authenticator"];
+                this._authenticator._registerApp(this)
             }
         }catch(e){
-            throw new AppConstructorError("Failed to initialize application.")
+            throw(e);
         }
     }
 
@@ -232,8 +233,22 @@ class App{
             }
             return visitedRoute;
         }catch(err){
-            throw new InitializationError("App failed to start.");
+            throw(err)
         }
+    }
+
+    setAuthenticatedUser(user){
+        if(this._authenticator === undefined){
+            throw new AuthenticatorNotImplemented("Missing authenticator implementation.")
+        }
+        this._authenticator.setAuthenticatedUser(user);
+    }
+
+    unsetAuthenticatedUser(){
+        if(this._authenticator === undefined){
+            throw new AuthenticatorNotImplemented("Missing authenticator implementation.")
+        }
+        this._authenticator.unsetAuthenticatedUser();
     }
 
     //setters and getters
