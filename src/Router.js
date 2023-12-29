@@ -108,25 +108,30 @@ class Router {
         return new RegExp(`^${regexPattern}$`);
     }
 
-    /**
-     * Changes view based on the current path (url of hash)
-     * @param {*} event - popstate event automatically provided
-     */
-    _onUrlChange = (event) => {
-        const routePath = this._getRouteAndQueryParams();
+    _checkRouteAndRegex(routePath){
         //checks direct match for route
         if(this.pathKeys.includes(routePath)){
-            this._changeView(routePath);
-            return;
+            return routePath;
         }
-
         //check for patterns
         for(let route of this.pathKeys){
             const routeRegex = this._routeToRegExp(route);
             if(routeRegex.test(routePath)){
-                this._changeView(route);
-                return;
+                return route;
             }
+        }
+    }
+
+    /**
+     * Changes view based on the current path (url of hash)
+     * @param {*} event - event automatically provided
+     */
+    _onUrlChange = (event) => {
+        let routePath = this._getRouteAndQueryParams();
+        routePath = this._checkRouteAndRegex(routePath);
+        if(routePath){
+            this._changeView(routePath);
+            return;
         }
 
         try{
@@ -233,8 +238,9 @@ class Router {
      * Starts the application
      */
     start = async () => {
-        const route = this._getRouteAndQueryParams();
-        this.currentView = await this.app.start(route);
+        let routePath = this._getRouteAndQueryParams();
+        routePath = this._checkRouteAndRegex(routePath);
+        this.currentView = await this.app.start(routePath);
     }
 
     //setters and getters

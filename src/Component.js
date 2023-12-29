@@ -176,6 +176,14 @@ class Component {
         await this._app.setData(field, data)
     }
 
+    parseQueryParams(queryString){
+        return this.app.parseQueryParams(queryString);
+    }
+
+    stringifyQueryParams(queryParams){
+        return this.app.stringifyQueryParams(queryParams);
+    }
+
     registerSubcomponents(subcomponents){
         this.subcomponents = subcomponents
         for(let subcomponent in this.subcomponents){
@@ -234,6 +242,7 @@ class Component {
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
         }
+        
         let template = await this._template();
         template = this._templatingEngine(template)
         let parsedTemplate = this._domParser.parseFromString(template, "text/html");
