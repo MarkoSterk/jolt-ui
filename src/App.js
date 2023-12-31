@@ -212,6 +212,12 @@ class App{
             if(this._registeredPathsKeys.length == 0){
                 return;
             }
+            if(!routePath && this._router.unknownView){
+                this._router.unknownView.generateComponent();
+                this._router.unknownViewActive = true;
+                visitedRoute = routePath;
+                return;
+            }
             if(routePath && this._registeredPathsKeys.includes(routePath)){
                 this._startComponents(routePath);
                 visitedRoute = routePath;
@@ -219,11 +225,6 @@ class App{
             else if(this.index){
                 this._startComponents(this.index);
                 visitedRoute = this.index;
-            }
-            else if(this._router.unknownView){
-                this._router.unknownView.generateComponent();
-                this._router.unknownViewActive = true;
-                visitedRoute = routePath;
             }
             else{
                 throw new AppStartError("App failed to start");

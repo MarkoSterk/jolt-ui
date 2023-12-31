@@ -2,7 +2,7 @@ import { ComponentConstructorError, DataError,
         RenderOptionsError, ComponentContainerError,
         ReservedKeywordError, DataMappingError } from "./Errors";
 import Authenticator from "./Authenticator";
-import dot from "dot";
+import dot from "./dot/doT";
 
 class Component {
     /**
