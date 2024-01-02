@@ -202,6 +202,7 @@ class Component {
                                     .filter(node => node.nodeType === Node.ELEMENT_NODE);
         const container = document.querySelector(this.container);
         if(!container){
+            console.log("Error thrown by: ", this.name);
             throw new ComponentContainerError("Could not find component container", this.name, this.container);
         }
         if(this.renderOptions.delete){
@@ -242,32 +243,25 @@ class Component {
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
         }
-        
         let template = await this._template();
         template = this._templatingEngine(template)
         let parsedTemplate = this._domParser.parseFromString(template, "text/html");
         parsedTemplate = await this._hydrate(parsedTemplate)
         await this._insertHtmlElements(parsedTemplate);
-        
         for(let method in this.afterGenerate){
             await this.afterGenerate[method].bind(this)();
         }
-
         for(const component of Object.keys(this.subcomponents)){
             await this.subcomponents[component].generateComponent();
         }
-
         for(const intervalMethod of this.intervalMethods){
             let id = setInterval(intervalMethod[0].bind(this), intervalMethod[1]);
             this._intervalMethodsIds.push(id);
         }
-
         for(let method in this.beforeActive){
             await this.beforeActive[method].bind(this)();
         }
-
         this._active = true;
-
         for(let method in this.afterActive){
             await this.afterActive[method].bind(this)();
         }

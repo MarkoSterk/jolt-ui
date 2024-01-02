@@ -60,7 +60,7 @@ class Authenticator{
 
     unsetAuthenticatedUser(){
         this._isAuthenticated = false;
-        this._user = {};
+        this._user = null;
     }
 
     get isAuthenticated(){

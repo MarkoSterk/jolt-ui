@@ -50,9 +50,6 @@ class Router {
         this.app.DOM.addEventListener(Authenticator.redirectNavEventName, async (event) => {
             //event listener on app container to detect any redirect events.
             event.stopPropagation();
-            if(this._midViewChange){
-                return;
-            }
             history.pushState(null, '', event.detail.redirectTo);
             await this._onUrlChange(event);
             return;
