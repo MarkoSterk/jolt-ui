@@ -13,6 +13,7 @@ class Router {
     currentView;
     unknownView;
     unknownViewActive;
+    _midViewChange = false;
 
     constructor(app, configs) {
         this.app = app
@@ -46,28 +47,37 @@ class Router {
     }
 
     _urlRouterType(){
-        this.app.DOM.addEventListener(Authenticator.redirectNavEventName, (event) => {
+        this.app.DOM.addEventListener(Authenticator.redirectNavEventName, async (event) => {
             //event listener on app container to detect any redirect events.
             event.stopPropagation();
+            if(this._midViewChange){
+                return;
+            }
             history.pushState(null, '', event.detail.redirectTo);
-            this._onUrlChange(event);
+            await this._onUrlChange(event);
             return;
         })
-        this.app.DOM.addEventListener(JoltNav.navEventName, (event) => {
+        this.app.DOM.addEventListener(JoltNav.navEventName, async (event) => {
             //event listener on app container to detect any navigation link clicks.
             event.stopPropagation();
+            if(this._midViewChange){
+                return;
+            }
             history.pushState(null, '', event.detail.navLink.href);
-            this._onUrlChange(event);
+            await this._onUrlChange(event);
             return;
         });
-        window.addEventListener("popstate", (event) => {
+        window.addEventListener("popstate", async (event) => {
             //event listener on window to detected navigation with browser buttons.
-            this._onUrlChange(event)
+            if(this._midViewChange){
+                return;
+            }
+            await this._onUrlChange(event)
         })
     }
 
     _hashRouterType(){
-        this.app.DOM.addEventListener('popstate', (event) => {this._onUrlChange(event)});
+        this.app.DOM.addEventListener('popstate', async (event) => {await this._onUrlChange(event)});
     }
 
     /**
@@ -126,19 +136,22 @@ class Router {
      * Changes view based on the current path (url of hash)
      * @param {*} event - event automatically provided
      */
-    _onUrlChange = (event) => {
+    _onUrlChange = async (event) => {
+        this._midViewChange = true;
         let routePath = this._getRouteAndQueryParams();
         routePath = this._checkRouteAndRegex(routePath);
         if(routePath){
-            this._changeView(routePath);
+            await this._changeView(routePath);
+            this._midViewChange = false;
             return;
         }
 
         try{
-            this._unknownView();
+            this._unknownView(); 
         }catch(err){
             throw new RouteError("Route error. Requested route or unknownView route not found.")
         }
+        this._midViewChange = false;
     }
 
     /**
