@@ -29,6 +29,7 @@ class Router {
         }else{
             throw new RouterTypeError("Wrong router type configuration.")
         }
+        this._viewChangePromise = null; //sets change view promise to null initially
         this._registerCustomElements({
             JoltNav
         });
@@ -50,31 +51,47 @@ class Router {
         this.app.DOM.addEventListener(Authenticator.redirectNavEventName, async (event) => {
             //event listener on app container to detect any redirect events.
             event.stopPropagation();
+            if(this._viewChangePromise){
+                //if view change is in progress it awaits the change first
+                await this._viewChangePromise;
+            }
             history.pushState(null, '', event.detail.redirectTo);
-            await this._onUrlChange(event);
+            //stores promise of the view change
+            this._viewChangePromise = this._onUrlChange(event);
             return;
         })
         this.app.DOM.addEventListener(JoltNav.navEventName, async (event) => {
             //event listener on app container to detect any navigation link clicks.
             event.stopPropagation();
-            if(this._midViewChange){
-                return;
+            if(this._viewChangePromise){
+                //if view change is in progress it awaits the change first
+                await this._viewChangePromise;
             }
             history.pushState(null, '', event.detail.navLink.href);
-            await this._onUrlChange(event);
+            //stores promise of the view change
+            this._viewChangePromise = this._onUrlChange(event);
             return;
         });
         window.addEventListener("popstate", async (event) => {
             //event listener on window to detected navigation with browser buttons.
-            if(this._midViewChange){
-                return;
+            if(this._viewChangePromise){
+                //if view change is in progress it awaits the change first
+                await this._viewChangePromise;
             }
-            await this._onUrlChange(event)
+            //stores promise of the view change
+            this._viewChangePromise = this._onUrlChange(event)
         })
     }
 
     _hashRouterType(){
-        this.app.DOM.addEventListener('popstate', async (event) => {await this._onUrlChange(event)});
+        this.app.DOM.addEventListener('popstate', async (event) => {
+            if(this._viewChangePromise){
+                //if view change is in progress it awaits the change first
+                await this._viewChangePromise;
+            }
+            //stores promise of the view change
+            this._viewChangePromise = await this._onUrlChange(event)
+        });
     }
 
     /**
@@ -134,21 +151,20 @@ class Router {
      * @param {*} event - event automatically provided
      */
     _onUrlChange = async (event) => {
-        this._midViewChange = true;
         let routePath = this._getRouteAndQueryParams();
         routePath = this._checkRouteAndRegex(routePath);
         if(routePath){
             await this._changeView(routePath);
-            this._midViewChange = false;
+            this._viewChangePromise = null;
             return;
         }
-
         try{
             this._unknownView(); 
         }catch(err){
             throw new RouteError("Route error. Requested route or unknownView route not found.")
         }
-        this._midViewChange = false;
+        //sets promise back to null
+        this._viewChangePromise = null;
     }
 
     /**
@@ -164,7 +180,9 @@ class Router {
             if(newPath.includes(component)){
                 break;
             }
-            await component.deconstructComponent();
+            if(component._active){
+                await component.deconstructComponent();
+            }
         }
     }
 

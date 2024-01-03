@@ -1,6 +1,6 @@
 {
   "name": "jolt-ui",
-  "version": "1.3.4",
+  "version": "1.3.1-15",
   "description": "A simple frontend framework based on components. Allows fast development of reactive ui's.",
   "repository": "https://github.com/MarkoSterk/jolt-ui",
   "main": "index.js",
