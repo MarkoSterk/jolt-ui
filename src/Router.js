@@ -49,7 +49,7 @@ class Router {
 
     _urlRouterType(){
         this.app.DOM.addEventListener(Authenticator.redirectNavEventName, async (event) => {
-            //event listener on app container to detect any redirect events.
+            //event listener on app container to detect any application redirect events.
             event.stopPropagation();
             if(this._viewChangePromise){
                 //if view change is in progress it awaits the change first
@@ -64,8 +64,8 @@ class Router {
             //event listener on app container to detect any navigation link clicks.
             event.stopPropagation();
             if(this._viewChangePromise){
-                //if view change is in progress it awaits the change first
-                await this._viewChangePromise;
+                //if view change is in progress it returns directly
+                return;
             }
             history.pushState(null, '', event.detail.navLink.href);
             //stores promise of the view change
