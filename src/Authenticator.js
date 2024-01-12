@@ -8,7 +8,8 @@ class Authenticator{
     static redirectNavEventName = "redirect-nav-event";
     _isAuthenticated = false;
     _authRoleField;
-    _user = {};
+    _reflect = false;
+    _user = null;
 
     _unauthorizedRedirect;
     _authorizedRedirect;
@@ -24,6 +25,12 @@ class Authenticator{
         this._unauthenticatedRedirect = Configs.unauthenticatedRedirect;
         this._authenticatedRedirect = Configs.authenticatedRedirect;
         this._authRoleField = Configs?.authRoleField;
+        if(Configs.reflect !== undefined){
+            if(typeof Configs.reflect !== "boolean"){
+                throw new AuthenticatorConstructorError("Reflect must be of type boolean.");
+            }
+            this._reflect = Configs.reflect
+        }
     }
 
     _registerApp(app){
@@ -53,14 +60,20 @@ class Authenticator{
         component.DOM.dispatchEvent(redirectEvent);
     }
 
-    setAuthenticatedUser(user){
+    async setAuthenticatedUser(user){
         this._isAuthenticated = true;
         this._user = user;
+        if(this._reflect){
+            await this._app.setData("user", user);
+        }
     }
 
-    unsetAuthenticatedUser(){
+    async unsetAuthenticatedUser(){
         this._isAuthenticated = false;
         this._user = null;
+        if(this._reflect){
+            await this._app.setData("user", null);
+        }
     }
 
     get isAuthenticated(){

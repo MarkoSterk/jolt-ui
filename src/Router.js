@@ -159,7 +159,7 @@ class Router {
             return;
         }
         try{
-            this._unknownView(); 
+            await this._unknownView(); 
         }catch(err){
             throw new RouteError("Route error. Requested route or unknownView route not found.")
         }
@@ -191,9 +191,13 @@ class Router {
      * @param {*} newPath new path of the router
      */
     _constructPathComponents = async (newPath) => {
+        let signal = "success";
         for(let component of newPath){
             if(!component._active){
-                await component.generateComponent();
+                signal = await component.generateComponent();
+                if(signal == component._signals.redirect){
+                    return this.app._authenticator._makeUnauthenticatedRedirect(component);
+                }
             }
         }
     }
@@ -245,10 +249,12 @@ class Router {
      */
     _unknownView = async () => {
         if(!this.unknownViewActive){
+            this._viewChangePromise = true;
             await this._deconstructPathComponents(this.paths[this.currentView]);
             await this.unknownView.generateComponent();
             this.currentView = null;
             this.unknownViewActive = true;
+            this._viewChangePromise = null;
         }
     }
 
@@ -267,8 +273,10 @@ class Router {
      */
     start = async () => {
         let routePath = this._getRouteAndQueryParams();
-        routePath = this._checkRouteAndRegex(routePath);
-        this.currentView = await this.app.start(routePath);
+        //routePath = this._checkRouteAndRegex(routePath);
+        //this.currentView = await this.app.start(routePath);
+        this.currentView = this._checkRouteAndRegex(routePath);
+        await this.app.start(this.currentView);
     }
 
     //setters and getters

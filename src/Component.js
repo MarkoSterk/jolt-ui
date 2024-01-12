@@ -60,6 +60,11 @@ class Component {
     _domParser;
     _templateFn;
     _templateCache;
+    _signals = {
+        success: "success",
+        redirect: "redirect",
+        fail: "fail"
+    };
 
     constructor(configs) {
         if(configs.properties){
@@ -202,7 +207,6 @@ class Component {
                                     .filter(node => node.nodeType === Node.ELEMENT_NODE);
         const container = document.querySelector(this.container);
         if(!container){
-            console.log("Error thrown by: ", this.name);
             throw new ComponentContainerError("Could not find component container", this.name, this.container);
         }
         if(this.renderOptions.delete){
@@ -238,7 +242,7 @@ class Component {
 
     async generateComponent() {
         if(this._authenticationRequired && !this._app._authenticator._isAuthenticated){
-            return this._app._authenticator._makeUnauthenticatedRedirect(this);
+            return this._signals.redirect;
         }
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
@@ -265,6 +269,7 @@ class Component {
         for(let method in this.afterActive){
             await this.afterActive[method].bind(this)();
         }
+        return this._signals.success;
     }
 
     async deconstructComponent() {
@@ -354,6 +359,14 @@ class Component {
 
     get properties(){
         return this._app.properties;
+    }
+
+    get authenticatedUser(){
+        return this._app.authenticatedUser;
+    }
+
+    get isAuthenticated(){
+        return this._app.isAuthenticated;
     }
 
     get authenticationRequired(){

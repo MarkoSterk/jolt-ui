@@ -1,6 +1,7 @@
 import { DataError, AppConstructorError,
         AppStartError, ComponentReloadError, AuthenticatorNotImplemented } from "./Errors";
 import Authenticator from "./Authenticator";
+import Component from "./Component";
 
 class App{
     name;
@@ -93,7 +94,7 @@ class App{
             if (paths) {
                 const childResult = this._extractPathsAndComponents(paths, newPath);
                 for (const childKey in childResult) {
-                    result[childKey] = [component, ...childResult[childKey]];
+                    result[childKey] = [component, ...childResult[childKey]].filter((comp) => comp instanceof Component);
                 }
             }
         }
@@ -179,13 +180,8 @@ class App{
         throw new DataError(`${dataField} is not a valid data field!`)
     }
 
-    async _startComponents(routePath){
-        const pathComponents = this._registeredPaths[routePath];
-        for(const component of pathComponents){
-            if(component){
-                await component.generateComponent();
-            }
-        }
+    async _constructComponents(routePath){
+        await this._router._constructPathComponents(this._registeredPaths[routePath]);
     }
 
     /**
@@ -202,7 +198,6 @@ class App{
          * @param {String} routePath String name or hash of the start component
          */
         try{
-            let visitedRoute;
             for(let method in this.beforeStart){
                 await this.beforeStart[method].bind(this)()
             }
@@ -215,16 +210,13 @@ class App{
             if(!routePath && this._router.unknownView){
                 this._router.unknownView.generateComponent();
                 this._router.unknownViewActive = true;
-                visitedRoute = routePath;
                 return;
             }
             if(routePath && this._registeredPathsKeys.includes(routePath)){
-                this._startComponents(routePath);
-                visitedRoute = routePath;
+                await this._constructComponents(routePath);
             }
             else if(this.index){
-                this._startComponents(this.index);
-                visitedRoute = this.index;
+                await this._constructComponents(this.index);
             }
             else{
                 throw new AppStartError("App failed to start");
@@ -232,7 +224,6 @@ class App{
             for(let method in this.afterStart){
                 await this.afterStart[method].bind(this)()
             }
-            return visitedRoute;
         }catch(err){
             throw(err)
         }
@@ -250,6 +241,10 @@ class App{
             throw new AuthenticatorNotImplemented("Missing authenticator implementation.")
         }
         this._authenticator.unsetAuthenticatedUser();
+    }
+
+    get authenticatedUser(){
+        return this._authenticator.user;
     }
 
     get isAuthenticated(){
