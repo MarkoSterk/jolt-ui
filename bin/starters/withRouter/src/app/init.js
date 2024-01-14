@@ -9,6 +9,7 @@ import menu from "./components/menu/menu.js";
 import footer from "./components/footer/footer.js";
 import main from "./components/main/main.js";
 import docs from "./components/docs/docs.js";
+import ExampleElement from "./elements/exampleElement/exampleElement.js";
 
 const app = new App({
     name: "<appName>",
@@ -16,6 +17,10 @@ const app = new App({
     <authInit>
     //add data and properties field if needed
 });
+
+app.registerCustomElements({
+    ExampleElement
+})
 
 app.addStaticComponents({
     menu,
