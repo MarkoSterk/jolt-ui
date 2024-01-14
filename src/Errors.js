@@ -230,3 +230,23 @@ export class AuthenticatorNotImplemented extends Error{
         `
     }
 }
+
+export class CustomElementOptionsMissing extends Error{
+    constructor(message){
+        super(message);
+        this.name = "CustomElement missing options.";
+        this.description = `
+            Missing options object for CustomElement.
+        `
+    }
+}
+
+export class CustomElementConstructorError extends Error{
+    constructor(message, missingFieldName){
+        super(message);
+        this.name = "CustomElement constructor error";
+        this.description = `
+            Failed to construct CustomElement. Missing options field ${missingFieldName}.
+        `
+    }
+}

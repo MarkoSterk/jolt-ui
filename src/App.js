@@ -184,6 +184,13 @@ class App{
         await this._router._constructPathComponents(this._registeredPaths[routePath]);
     }
 
+    registerCustomElements(elements){
+        for(const name in elements){
+            const element = elements[name];
+            customElements.define(element.tagName, element);
+        }
+    }
+
     /**
      * Sets default/index component of app.
      * @param {String} path of the index component

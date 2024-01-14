@@ -14,6 +14,7 @@ class Router {
     unknownView;
     unknownViewActive;
     _midViewChange = false;
+    _ignorePrefix = "";
 
     constructor(app, configs) {
         this.app = app
@@ -22,10 +23,13 @@ class Router {
             throw new RouterConfigError("Router configuration error.");
         }
         this.configs = configs;
-        if(configs.routerType === "url"){
+        if(configs.ignorePrefix !== undefined){
+            this._ignorePrefix = configs.ignorePrefix;
+        }
+        if(this.configs.routerType === "url"){
             this._urlRouterType();
-        }else if(configs.routerType === "hash"){
-           this._hashRouterType();
+        }else if(this.configs.routerType === "hash"){
+            this._hashRouterType();
         }else{
             throw new RouterTypeError("Wrong router type configuration.")
         }
@@ -90,7 +94,7 @@ class Router {
                 await this._viewChangePromise;
             }
             //stores promise of the view change
-            this._viewChangePromise = await this._onUrlChange(event)
+            this._viewChangePromise = this._onUrlChange(event)
         });
     }
 
@@ -100,6 +104,9 @@ class Router {
      */
     _getRouteQueryParamsAndHashUrl = () => {
         let currentPath = window.location.pathname; //current path name
+        if(this._ignorePrefix.length > 0){
+            currentPath = currentPath.substring(this._ignorePrefix.length);
+        }
         let queryParams = window.location.search; //query parameters
         this.app.hash = window.location.hash;
         this.app.queryParams = queryParams; //sets query parameters
@@ -237,10 +244,7 @@ class Router {
     }
 
     _registerCustomElements(elements){
-        for(const name in elements){
-            const element = elements[name];
-            customElements.define(element.tagName, element);
-        }
+        this.app.registerCustomElements(elements);
     }
 
     /**

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { modifyFiles, installVite,
         determineComponentFolder, fileModifier,
         parseNewComponentAnswers, copyGitignoreFile } from './utilities/helperFuncs.mjs';
-
+import lodash from "lodash";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,6 +107,41 @@ program
       fileModifier(finalAnswers, finalAnswers, CWD, [path.join(componentPath.currentDestination,
                                                               finalAnswers.camelCaseName,
                                                               `${finalAnswers.camelCaseName}.js`)]);
+    });
+  });
+
+
+  program
+  .command('new-element')
+  .description('Create a JoltUI CustomElement')
+  .option('-p, --path <string>', 'New element path (relative to project directory)', '/src/app/elements')
+  .action((options) => {
+    inquirer
+    .prompt([
+        {
+            type: 'input',
+            name: 'elementName',
+            message: 'Element name (valid tag-name):'
+        }
+    ])
+  .then(answers => {
+      answers.camelCaseName = lodash.camelCase(answers.elementName);
+      let destination;
+      let elementPath = "src/app/elements";
+      if(fs.existsSync(path.join(CWD, elementPath))){
+        destination = path.join(CWD, elementPath, answers.camelCaseName);
+      }
+      else if(fs.existsSync(path.join(CWD, "src/elements"))){
+        elementPath = "src/elements";
+        destination = path.join(CWD, elementPath, answers.camelCaseName);
+      }
+      else{
+        console.log("ERROR: destination folder for new element can't be found.")
+        return;
+      }
+      fs.copySync(path.join(__dirname, 'starters', 'newElement', 'newElement.js'),
+                  path.join(destination, `${answers.camelCaseName}.js`));
+      fileModifier(answers, answers, CWD, [path.join(elementPath, `${answers.camelCaseName}`, `${answers.camelCaseName}.js`)]);
     });
   });
 
