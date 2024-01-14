@@ -1,5 +1,5 @@
-import {getAllArgs, getElementsWithJoltEvent, setEventListeners} from "../utilities/hydrationFunctions.js";
-import { CustomElementConstructorError, CustomElementOptionsMissing } from "../Errors.js";
+import {getAllArgs, getElementsWithJoltEvent, setEventListeners} from "jolt-ui/src/utilities/hydrationFunctions.js";
+import { CustomElementConstructorError, CustomElementOptionsMissing } from "jolt-ui/src/Errors.js";
 
 /*
 CustomElement factory.
@@ -8,7 +8,7 @@ connect: (optional) method that runs before the element is connected to the DOM
 disconnect: (optional) method that runs when the element is disconnected from the DOM
 markup: method that returns the HTML markup of the custom element
 */
-function CustomElement(options){
+function Element(options){
     if(options === undefined){
         throw new CustomElementOptionsMissing("Missing options object for CustomElement.");
     }
@@ -23,6 +23,8 @@ function CustomElement(options){
     }
     return class extends options.extends{
         static tagName = options.name
+        static _identifier = "JoltElement";
+
         constructor(){
             super();
             this.renderOptions = {
@@ -32,6 +34,7 @@ function CustomElement(options){
             Object.assign(this, options)
             this._observedAttributes = [];
             this.data = {};
+            this.setAttribute("identifier", this.constructor._identifier);
         }
 
         async connectedCallback(){
@@ -40,6 +43,8 @@ function CustomElement(options){
                     await this.connect[method].bind(this)();
                 }
             }
+            const component = this.closest('[identifier="JoltComponent"]');
+            this.component = component.component;
             await this.render();
         }
 
@@ -49,6 +54,7 @@ function CustomElement(options){
                     await this.disconnect[method].bind(this)();
                 }
             }
+            this.component = null;
         }
 
         _getAllArgs(elem){
@@ -64,6 +70,7 @@ function CustomElement(options){
         }
 
         async render() {
+            console.log(this.getAttribute("identifier"))
             this._getJoltAttributeValues();
             for(let method in this.beforeGenerate){
                 await this.beforeGenerate[method].bind(this)();
@@ -95,6 +102,10 @@ function CustomElement(options){
             await this.render();
         }
 
+        _registerApp(app){
+            this.app = app;
+        }
+
         getData(field){
             return this.getAttribute(`:${field}`);
         }
@@ -106,7 +117,19 @@ function CustomElement(options){
         set data(data){
             this._data = data;
         }
+
+        get component(){
+            return this._component;
+        }
+
+        get identiefier(){
+            return this.getAttribute("identifier");
+        }
+
+        set component(component){
+            this._component = component;
+        }
     }
 }
 
-export default CustomElement;
+export default Element;

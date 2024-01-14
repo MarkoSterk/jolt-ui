@@ -21,6 +21,7 @@ class App{
     _registeredPathsKeys = [];
     _router;
     _authenticator;
+    _identifier = "JoltApp"
 
     /**
      * Accepts configuration object with main app configs.
@@ -56,6 +57,9 @@ class App{
                 this._authenticator = configs["authenticator"];
                 this._authenticator._registerApp(this)
             }
+            const appContainer = document.querySelector(this.container);
+            appContainer.setAttribute("identifier", this._identifier);
+            appContainer.app = this;
         }catch(e){
             throw(e);
         }

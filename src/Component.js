@@ -1,4 +1,4 @@
-import { ComponentConstructorError, DataError,
+import { ComponentConstructorError,
         RenderOptionsError, ComponentContainerError,
         ReservedKeywordError, DataMappingError } from "./Errors";
 import Authenticator from "./Authenticator";
@@ -65,6 +65,7 @@ class Component {
         redirect: "redirect",
         fail: "fail"
     };
+    _identifier = "JoltComponent";
 
     constructor(configs) {
         if(configs.properties){
@@ -78,7 +79,7 @@ class Component {
                 throw new RenderOptionsError("Render options error", configs.name);
             }
         }
-        Object.assign(this, configs)
+        Object.assign(this, configs);
         this._domParser = new DOMParser();
     }
 
@@ -244,6 +245,9 @@ class Component {
         if(this._authenticationRequired && !this._app._authenticator._isAuthenticated){
             return this._signals.redirect;
         }
+        const containerElement = document.querySelector(this.container);
+        containerElement.setAttribute("identifier", this._identifier);
+        containerElement.component = this;
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
         }
@@ -291,6 +295,9 @@ class Component {
         for(let method in this.afterDeactive){
             await this.afterDeactive[method].bind(this)()
         }
+        const containerElement = document.querySelector(this.container);
+        containerElement.removeAttribute("identifier");
+        containerElement.component = null;
     }
 
     makeRedirect(path){
