@@ -1,14 +1,14 @@
-import { CustomElement, html } from "jolt-ui";
+import { Element, html } from "jolt-ui";
 
 async function exampleElementMarkup(){
     return html`
         <div>
-            Example CustomElement.
+            Example Element.
         </div>
     `
 }
 
-const exampleElement = CustomElement({
+const exampleElement = Element({
     name: "example-element",
     markup: exampleElementMarkup,
 });

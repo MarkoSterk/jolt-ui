@@ -1,4 +1,4 @@
-import { CustomElement, html } from "jolt-ui";
+import { Element, html } from "jolt-ui";
 
 async function <camelCaseName>Markup(){
     return html`
@@ -8,7 +8,7 @@ async function <camelCaseName>Markup(){
     `
 }
 
-const <camelCaseName> = CustomElement({
+const <camelCaseName> = Element({
     name: "<elementName>",
     markup: <camelCaseName>Markup,
 });

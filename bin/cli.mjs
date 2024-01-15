@@ -121,7 +121,7 @@ program
         {
             type: 'input',
             name: 'elementName',
-            message: 'Element name (valid tag-name):'
+            message: 'Element name (valid html tag-name):'
         }
     ])
   .then(answers => {
