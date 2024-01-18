@@ -70,7 +70,6 @@ function Element(options){
         }
 
         async render() {
-            console.log(this.getAttribute("identifier"))
             this._getJoltAttributeValues();
             for(let method in this.beforeGenerate){
                 await this.beforeGenerate[method].bind(this)();
