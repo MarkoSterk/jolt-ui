@@ -33,26 +33,32 @@ import { ComponentConstructorError,
         ReservedKeywordError, DataMappingError } from "./Errors";
 import Authenticator from "./Authenticator";
 import dot from "./dot/doT";
+import App from "./App";
 
 class Component {
+
     /**
-   * Main Component class.
-   * @param {String} name Name of the component
-   * @param  {String} container  ID/class or other identifier of container HTML element (i.e. div, section etc.). querySelector is used to fetch container.
-   * @param  {Function} markup Function for template rendering. Gets "this" object bound-
-   * @param {object} subcomponents Object with subcomponents for this component
-   * @param {Array} intervalMethods array of arrays [method, intervalDuration] for methods that need to run repeatedly
-   * @param {Component} parent Parent component if this component is a subcomponent or childcomponent
-   * @param {object} methods Object with methods which extend component functionality. Used to create event listeners. Each method gets "this" (component) bound.
-   * @param {object} beforeGenerate Object with methods that should run before the component is generated and displayed. Fetching of data/api calls for example.
-   * @param {object} afterGenerate Object with methods that should run after the component is generated. Should not include any data fetching because that would trigger a component reload
-   * @param {object} beforeDeconstruct Object with methods that should run before the component is deconstructed. Can include custom data cleaning or other stuff.
-   * @param {object} afterDeconstruct Object with methods that should run after the component is deconstructed. Can include custom data cleaning or other stuff.
-    * @param {String} dataField string name of data field this components listenes to. Maps to the "data[dataField]" field of the App
-    */
+     * String name of the Component
+     * @type {string}
+     */
     name;
+
+    /**
+     * Container HTML element of the component. Valid query selector
+     * @type {string}
+     */
     container;
+
+    /**
+     * Markup function for the component
+     * @type {Function}
+     */
     markup;
+
+    /**
+     * Render options for the component
+     * @type {Object.&lt;string, any>}
+     */
     renderOptions = {
         delete: true,
         insert: "afterbegin",
@@ -61,42 +67,170 @@ class Component {
         useEngine: false
     }
 
+    /**
+     * Authentication required boolean option
+     * @type {boolean}
+     */
     _authenticationRequired = false;
 
+    /**
+     * Subcomponents object of the component. Contains all subcomponents
+     * @type {Object.&lt;string, Component>}
+     */
     subcomponents = {};
 
+    /**
+     * Before generate lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     beforeGenerate = {};
+
+    /**
+     * After generate lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     afterGenerate = {};
+
+    /**
+     * Before active lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     beforeActive = {};
+
+    /**
+     * after active lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     afterActive = {};
 
-    beforeDeconstruct = {}
+    /**
+     * Before deconstruct lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
+    beforeDeconstruct = {};
+
+    /**
+     * After deconstruct lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     afterDeconstruct = {};
+
+    /**
+     * Before deactive lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     beforeDeactive = {};
+
+    /**
+     * After deactive lifecycle hook functions of the component.
+     * @type {Object.&lt;string, Function>}
+     */
     afterDeactive = {};
 
+    /**
+     * Interval methods for the component.
+     * @type {Array&lt;Array&lt;Function, number>>}
+     */
     intervalMethods = [];
+
+    /**
+     * Connected functions for the component (for event handlers)
+     * @type {Object.&lt;string, Function>}
+     */
     methods = {};
+
+    /**
+     * Meta data field for the component. Can contain any additional information
+     * @type {Object}
+     */
     metaData = {};
+
+    /**
+     * Data field of the object
+     * @type {string}
+     */
     dataField;
+
+    /**
+     * Whether the component should reload upon data change. Default true
+     * @type {boolean}
+     */
     reloadOnDataChange = true;
 
+    /**
+     * Indicates if component is currently active
+     * @type {boolean}
+     */
     _active = false;
+
+    /**
+     * Parent component if this component is a subcomponent
+     * @type {Component}
+     */
     _parent
+
+    /**
+     * Array of interval methods IDs
+     * @type {Array&lt;number>}
+     */
     _intervalMethodsIds = [];
+
+    /**
+     * Application instance
+     * @type {App}
+     */
     _app;
+
+    /**
+     * Current data of the component
+     * @type {any|undefined}
+     */
     _data;
+
+    /**
+     * Current url query string
+     * @type {string|undefined}
+     */
     _queryParams;
+
+    /**
+     * Component DOM parser
+     * @type {DOMParser}
+     */
     _domParser;
+
+    /**
+     * Compiled component template function if the DotJS render engine is used
+     * @type {any|undefined}
+     */
     _templateFn;
+
+    /**
+     * Cached template string if caching is enabled
+     * @type {string|undefined}
+     */
     _templateCache;
+
+    /**
+     * Signals that the component may emit when certain events occur.
+     * @type {Object.&lt;string, string>}
+     */
     _signals = {
         success: "success",
         redirect: "redirect",
         fail: "fail"
     };
+
+    /**
+     * Identifier string for Jolt Components in DOM elements
+     * @type {string}
+     */
     _identifier = "JoltComponent";
 
+    /**
+     * Constructor for Component
+     * @param {Object} configs 
+     */
     constructor(configs) {
         if(configs.properties){
             throw new ReservedKeywordError("Reserved keyword error", "properties");
@@ -113,27 +247,50 @@ class Component {
         this._domParser = new DOMParser();
     }
 
+    /**
+     * Validates configuration field types
+     * @param {any} value 
+     * @param {string} valueType 
+     * @returns {boolean}
+     */
     validateConfigData(value, valueType){
         return typeof value === valueType.toLowerCase();
     }
 
+    /**
+     * Template method caller of the component
+     * @returns {Promise&lt;string>}
+     */
     async _template(){
         return await this.markup.bind(this)();
     }
 
+    /**
+     * Sets animations on the component
+     * @param {HTMLElement} parsedTemplate 
+     * @returns {Promise&lt;HTMLElement>}
+     */
     async _setAnimations(parsedTemplate){
         let allElems = [...parsedTemplate.querySelectorAll('[animate]')];
         for(let elem of allElems){
+            // @ts-ignore
             let args = this._getAllArgs(elem)
             if(Object.keys(args).length > 0){
-                this.methods[elem.getAttribute('animate')].bind(this)(elem, args);
+                // @ts-ignore
+                this.methods[elem?.getAttribute('animate')].bind(this)(elem, args);
             }else{
-                this.methods[elem.getAttribute('animate')].bind(this)(elem);
+                // @ts-ignore
+                this.methods[elem?.getAttribute('animate')].bind(this)(elem);
             }
         }
         return parsedTemplate;
     }
 
+    /**
+     * Gets all jolt arguments of html node
+     * @param {HTMLElement} elem 
+     * @returns {Object.&lt;string, any>}
+     */
     _getAllArgs(elem){
         return Array.from(elem.attributes).reduce((acc, attr) => {
             if(attr.name.startsWith(":")){
@@ -150,6 +307,11 @@ class Component {
         }, {});
     }
 
+    /**
+     * Gets all elements with Jolt event handlers
+     * @param {HTMLElement} parsedTemplate 
+     * @returns {Array&lt;HTMLElement>}
+     */
     _getElementsWithJoltEvent(parsedTemplate){
         const allElements = parsedTemplate.querySelectorAll("*");
         const joltElements = [];
@@ -165,11 +327,19 @@ class Component {
         return joltElements;
     }
 
+    /**
+     * Sets event listeners on all elements
+     * @param {HTMLElement} parsedTemplate 
+     * @returns {Promise&lt;HTMLElement>}
+     */
     async _setEventListeners(parsedTemplate){
         const joltElements = this._getElementsWithJoltEvent(parsedTemplate);
         for(let joltElement of joltElements){
+            // @ts-ignore
             const elem = joltElement.element;
+            // @ts-ignore
             const eventName = joltElement.eventName;
+            // @ts-ignore
             const methodName = joltElement.methodName;
             elem.addEventListener(eventName, async function(event){
                 let args = this._getAllArgs(elem)
@@ -183,6 +353,11 @@ class Component {
         return parsedTemplate;
     }
 
+    /**
+     * Registers component on application
+     * @param {App} app 
+     * @returns {Promise&lt;void>}
+     */
     async _registerApp(app){
         if(!this._app){
             this._app = app;
@@ -199,27 +374,58 @@ class Component {
         }
     }
 
+    /**
+     * Reloads data of Component
+     * @param {any} data 
+     * @returns {Promise&lt;void>}
+     */
     async _reloadData(data){
         this._data = data
         if(this._active === true &amp;&amp; this.reloadOnDataChange != false) await this._reloadComponent()
     }
 
+    /**
+     * Gets data from the application instance
+     * @param {string} field 
+     * @returns {any}
+     */
     getData(field){
         return this._app.getData(field);
     }
 
+    /**
+     * Sets data on the application data object
+     * @param {string} field 
+     * @param {any} data
+     * @returns {Promise&lt;any>} 
+     */
     async setData(field, data){
         await this._app.setData(field, data)
     }
 
+    /**
+     * Parses provided query string
+     * @param {string} queryString 
+     * @returns {Object.&lt;string, string|number>}
+     */
     parseQueryParams(queryString){
         return this.app.parseQueryParams(queryString);
     }
 
+    /**
+     * Stringifies object with query parameters
+     * @param {Object.&lt;string, string|number>} queryParams 
+     * @returns {string}
+     */
     stringifyQueryParams(queryParams){
         return this.app.stringifyQueryParams(queryParams);
     }
 
+    /**
+     * Registers subcomponents with this Component
+     * @param {Object.&lt;string, Component>} subcomponents 
+     * @returns {void}
+     */
     registerSubcomponents(subcomponents){
         this.subcomponents = subcomponents
         for(let subcomponent in this.subcomponents){
@@ -227,13 +433,26 @@ class Component {
         }
     }
 
+    /**
+     * Hydrates template with Jolt functionality
+     * @param {Document} parsedTemplate 
+     * @returns {Promise&lt;Document>}
+     */
     async _hydrate(parsedTemplate){
+        // @ts-ignore
         parsedTemplate = await this._setEventListeners(parsedTemplate);
+        // @ts-ignore
         parsedTemplate = await this._setAnimations(parsedTemplate);
         return parsedTemplate
     }
 
+    /**
+     * Inserts HTML elements into current markup of component
+     * @param {Document} parsedTemplate 
+     * @returns {Promise&lt;void>}
+     */
     async _insertHtmlElements(parsedTemplate){
+        // @ts-ignore
         const parsedElements = Array.from(parsedTemplate.body.childNodes)
                                     .filter(node => node.nodeType === Node.ELEMENT_NODE);
         const container = document.querySelector(this.container);
@@ -245,13 +464,20 @@ class Component {
         }
         if(parsedElements){
             parsedElements.reverse().forEach(node => {
+                // @ts-ignore
                 container.insertAdjacentElement(this.renderOptions.insert, node);
             })
         }
     }
 
+    /**
+     * Envokes templating engine if set in configs (renderOptions)
+     * @param {string} template 
+     * @returns {string}
+     */
     _templatingEngine(template){
         if(!this._templateFn &amp;&amp; this.renderOptions?.useEngine){
+            // @ts-ignore
             this._templateFn = dot.template(template);
         }
         if(this.renderOptions?.useEngine){
@@ -260,10 +486,15 @@ class Component {
         return template
     }
 
+    /**
+     * Reloads component
+     * @returns {Promise&lt;void>}
+     */
     async _reloadComponent() {
         let template = await this._template();
         template = this._templatingEngine(template)
         let parsedTemplate = this._domParser.parseFromString(template, "text/html");
+        // @ts-ignore
         parsedTemplate = await this._hydrate(parsedTemplate)
         await this._insertHtmlElements(parsedTemplate);
         for(let component in this.subcomponents){
@@ -271,12 +502,19 @@ class Component {
         }
     }
 
+
+    /**
+     * Generates component
+     * @returns {Promise&lt;string>}
+     */
     async generateComponent() {
         if(this._authenticationRequired &amp;&amp; !this._app._authenticator._isAuthenticated){
             return this._signals.redirect;
         }
         const containerElement = document.querySelector(this.container);
+        // @ts-ignore
         containerElement.setAttribute("identifier", this._identifier);
+        // @ts-ignore
         containerElement.component = this;
         for(let method in this.beforeGenerate){
             await this.beforeGenerate[method].bind(this)();
@@ -293,7 +531,9 @@ class Component {
             await this.subcomponents[component].generateComponent();
         }
         for(const intervalMethod of this.intervalMethods){
+            // @ts-ignore
             let id = setInterval(intervalMethod[0].bind(this), intervalMethod[1]);
+            // @ts-ignore
             this._intervalMethodsIds.push(id);
         }
         for(let method in this.beforeActive){
@@ -306,6 +546,10 @@ class Component {
         return this._signals.success;
     }
 
+    /**
+     * Deconstructs component
+     * @returns {Promise&lt;void>}
+     */
     async deconstructComponent() {
         for(let method in this.beforeDeconstruct){
             await this.beforeDeconstruct[method].bind(this)()
@@ -313,10 +557,11 @@ class Component {
         for(const id of this._intervalMethodsIds){
             clearInterval(id);
         }
-        this.intervalMethodsIds = [];
+        this._intervalMethodsIds = [];
         for(const component of Object.keys(this.subcomponents)){
             await this.subcomponents[component].deconstructComponent();
         }
+        // @ts-ignore
         document.querySelector(this.container).innerHTML = '';
         for(let method in this.afterDeconstruct){
             await this.afterDeconstruct[method].bind(this)()
@@ -326,18 +571,30 @@ class Component {
             await this.afterDeactive[method].bind(this)()
         }
         const containerElement = document.querySelector(this.container);
+        // @ts-ignore
         containerElement.removeAttribute("identifier");
+        // @ts-ignore
         containerElement.component = null;
     }
 
+    /**
+     * Makes redirect event
+     * @param {string} path 
+     * @returns {void}
+     */
     makeRedirect(path){
         const redirectEvent = new CustomEvent(Authenticator.redirectNavEventName, {
             bubbles: true,
             detail: {redirectTo: path}
         });
+        // @ts-ignore
         this.DOM.dispatchEvent(redirectEvent);
     }
 
+    /**
+     * Forces component reload
+     * @returns {Promise&lt;void>}
+     */
     async forceReload(){
         await this._reloadComponent()
     }
@@ -347,38 +604,67 @@ class Component {
         return this._parent
     }
 
+    /**
+     * Sets template cache if it is enabled in renderOptions
+     * @param {string} cache 
+     */
     set templateCache(cache){
         this._templateCache = cache;
     }
 
+    /**
+     * Returns chached template
+     * @return {string|undefined}
+     */
     get templateCache(){
         return this._templateCache;
     }
 
+    /**
+     * Sets new query parameter string
+     * @param {string} params 
+     */
     set queryParams(params){
+        // @ts-ignore
         this._app.queryParams = params;
     }
 
+    /**
+     * Returns query params
+     * @return {string|undefined}
+     */
     get queryParams(){
         return this._app.queryParams;
     }
 
+    /**
+     * Returns current app path
+     * @returns {string|null|undefined}
+     */
     get path(){
         return this._app.path;
     }
 
+    /**
+     * Returns current url hash
+     * @returns {string|undefined}
+     */
     get hash(){
         return this._app.hash;
     }
 
-    // set data(data){
-    //     this._data = data
-    // }
-
+    /**
+     * Returns application class instance
+     * @returns {App}
+     */
     get app(){
         return this._app;
     }
 
+    /**
+     * Returns component data field from application data object if dataField parameter is set
+     * @returns {any|null}
+     */
     get data(){
         if(this.dataField){
             return this._data
@@ -386,30 +672,58 @@ class Component {
         return null;
     }
 
+    /**
+     * Returns application container element and all its sub-elements
+     * @returns {Element|null}
+     */
     get appDOM(){
         return this._app.DOM;
     }
 
+    /**
+     * Returns component container element and all its sub-elements
+     * @returns {Element|null}
+     */
     get DOM(){
         return document.querySelector(this.container);;
     }
 
+    /**
+     * Returns application properties if set
+     * @returns {any|null|undefined}
+     */
     get properties(){
         return this._app.properties;
     }
 
+    /**
+     * Returns authenticated user from the Authenticator
+     * @returns {any|undefined}
+     */
     get authenticatedUser(){
         return this._app.authenticatedUser;
     }
 
+    /**
+     * Returns boolean if Authenticated user is set or not
+     * @returns {boolean}
+     */
     get isAuthenticated(){
         return this._app.isAuthenticated;
     }
 
+    /**
+     * Returns true or false if authentication for this component is required
+     * @returns {boolean}
+     */
     get authenticationRequired(){
         return this._authenticationRequired;
     }
 
+    /**
+     * Sets if authentication is required for this component
+     * @return {void}
+     */
     set authenticationRequired(authentication){
         this._authenticationRequired = authentication;
     }
@@ -425,13 +739,13 @@ export default Component;</code></pre>
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AppConstructorError_AppConstructorError.html">AppConstructorError</a></li><li><a href="AppStartError_AppStartError.html">AppStartError</a></li><li><a href="Authenticator.html">Authenticator</a></li><li><a href="AuthenticatorConstructorError_AuthenticatorConstructorError.html">AuthenticatorConstructorError</a></li><li><a href="AuthenticatorNotImplemented_AuthenticatorNotImplemented.html">AuthenticatorNotImplemented</a></li><li><a href="ComponentConstructorError_ComponentConstructorError.html">ComponentConstructorError</a></li><li><a href="ComponentContainerError_ComponentContainerError.html">ComponentContainerError</a></li><li><a href="ComponentReloadError_ComponentReloadError.html">ComponentReloadError</a></li><li><a href="CustomElementConstructorError_CustomElementConstructorError.html">CustomElementConstructorError</a></li><li><a href="CustomElementOptionsMissing_CustomElementOptionsMissing.html">CustomElementOptionsMissing</a></li><li><a href="DataError_DataError.html">DataError</a></li><li><a href="DataMappingError_DataMappingError.html">DataMappingError</a></li><li><a href="GetTemplateError_GetTemplateError.html">GetTemplateError</a></li><li><a href="InitializationError_InitializationError.html">InitializationError</a></li><li><a href="RenderOptionsError_RenderOptionsError.html">RenderOptionsError</a></li><li><a href="ReservedKeywordError_ReservedKeywordError.html">ReservedKeywordError</a></li><li><a href="RouteError_RouteError.html">RouteError</a></li><li><a href="Router.html">Router</a></li><li><a href="RouterConfigError_RouterConfigError.html">RouterConfigError</a></li><li><a href="RouterTypeError_RouterTypeError.html">RouterTypeError</a></li></ul><h3>Global</h3><ul><li><a href="global.html#getAllArgs">getAllArgs</a></li><li><a href="global.html#getElementsWithJoltEvent">getElementsWithJoltEvent</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#html">html</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AppConstructorError_AppConstructorError.html">AppConstructorError</a></li><li><a href="AppStartError_AppStartError.html">AppStartError</a></li><li><a href="Authenticator.html">Authenticator</a></li><li><a href="AuthenticatorConstructorError_AuthenticatorConstructorError.html">AuthenticatorConstructorError</a></li><li><a href="AuthenticatorNotImplemented_AuthenticatorNotImplemented.html">AuthenticatorNotImplemented</a></li><li><a href="Component.html">Component</a></li><li><a href="ComponentConstructorError_ComponentConstructorError.html">ComponentConstructorError</a></li><li><a href="ComponentContainerError_ComponentContainerError.html">ComponentContainerError</a></li><li><a href="ComponentReloadError_ComponentReloadError.html">ComponentReloadError</a></li><li><a href="CustomElementConstructorError_CustomElementConstructorError.html">CustomElementConstructorError</a></li><li><a href="CustomElementOptionsMissing_CustomElementOptionsMissing.html">CustomElementOptionsMissing</a></li><li><a href="DataError_DataError.html">DataError</a></li><li><a href="DataMappingError_DataMappingError.html">DataMappingError</a></li><li><a href="GetTemplateError_GetTemplateError.html">GetTemplateError</a></li><li><a href="InitializationError_InitializationError.html">InitializationError</a></li><li><a href="RenderOptionsError_RenderOptionsError.html">RenderOptionsError</a></li><li><a href="ReservedKeywordError_ReservedKeywordError.html">ReservedKeywordError</a></li><li><a href="RouteError_RouteError.html">RouteError</a></li><li><a href="Router.html">Router</a></li><li><a href="RouterConfigError_RouterConfigError.html">RouterConfigError</a></li><li><a href="RouterTypeError_RouterTypeError.html">RouterTypeError</a></li></ul><h3>Global</h3><ul><li><a href="global.html#getAllArgs">getAllArgs</a></li><li><a href="global.html#getElementsWithJoltEvent">getElementsWithJoltEvent</a></li><li><a href="global.html#getTemplate">getTemplate</a></li><li><a href="global.html#html">html</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Sat Jan 20 2024 21:59:25 GMT+0100 (Central European Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Sun Jan 21 2024 10:49:11 GMT+0100 (Central European Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

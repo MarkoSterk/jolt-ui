@@ -240,7 +240,7 @@ class Component {
     /**
      * Sets animations on the component
      * @param {HTMLElement} parsedTemplate 
-     * @returns 
+     * @returns {Promise<HTMLElement>}
      */
     async _setAnimations(parsedTemplate){
         let allElems = [...parsedTemplate.querySelectorAll('[animate]')];
@@ -302,7 +302,7 @@ class Component {
     /**
      * Sets event listeners on all elements
      * @param {HTMLElement} parsedTemplate 
-     * @returns 
+     * @returns {Promise<HTMLElement>}
      */
     async _setEventListeners(parsedTemplate){
         const joltElements = this._getElementsWithJoltEvent(parsedTemplate);
