@@ -1,5 +1,9 @@
 
-
+/**
+ * 
+ * @param {HTMLElement} elem 
+ * @returns {Object.<string, any>}
+ */
 export function getAllArgs(elem){
     return Array.from(elem.attributes).reduce((acc, attr) => {
         if(attr.name.startsWith(":")){
@@ -16,7 +20,11 @@ export function getAllArgs(elem){
     }, {});
 }
 
-
+/**
+ * Utility function for getting all elements with Jolt events.
+ * @param {NodeList} template 
+ * @returns {Array<Node>}
+ */
 export function getElementsWithJoltEvent(template){
     const allElements = template.querySelectorAll("*");
     const joltElements = [];

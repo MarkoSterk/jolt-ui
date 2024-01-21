@@ -1,3 +1,5 @@
+import App from "./src/App.js";
+
 /**
  * Entry point for the Jolt-UI framework.
  * 
