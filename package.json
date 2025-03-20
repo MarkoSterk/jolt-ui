@@ -1,0 +1,34 @@
+{
+  "name": "jolt-ui",
+  "version": "2.0.0",
+  "description": "A web components based SPA framework",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarkoSterk/jolt-ui.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "vite build"
+  },
+  "keywords": [
+    "single-page",
+    "application",
+    "web",
+    "components",
+    "reactivity",
+    "simplicity"
+  ],
+  "author": "Marko Šterk",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "terser": "^5.39.0",
+    "vite": "^6.2.2",
+    "vite-plugin-compression": "^0.5.1"
+  },
+  "dependencies": {
+    "diff-dom": "^5.1.4",
+    "jolt-ui": "file:"
+  }
+}
